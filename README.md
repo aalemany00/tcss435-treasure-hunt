@@ -13,7 +13,7 @@ a way to reset/regenerate the grid.
 
 | Name   | Role |
 |--------|------|
-| Adrian |      |
+| Adrian | GitHub setup, reset/regenerate functionality, README & submission packaging |
 | Aramis | GUI rendering (colors, symbols, layout) |
 | Dylon  | Grid setup and random placement |
 
