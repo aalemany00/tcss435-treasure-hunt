@@ -22,7 +22,19 @@ class TreasureHuntGUI:
         )
         self.canvas.pack(padx=20, pady=20)
 
+        # Button to regenerate the grid
+        self.regenerate_button = tk.Button(
+            self.root,
+            text="Regenerate Grid",
+            command=self.regenerate_grid
+        )
+        self.regenerate_button.pack(pady=(0, 20))
+
         # Draw the grid
+        self.draw_grid()
+
+    def regenerate_grid(self):
+        self.model.generate_grid()
         self.draw_grid()
 
     def draw_grid(self):
