@@ -28,6 +28,7 @@ class MyGridModel:
             = lambda: (random.randint(0, self.size - 1), random.randint(0, self.size - 1))
 
         self.grid = np.zeros((self.size, self.size), dtype=int)
+        self.wall_positions = set()
 
         # place treasure position on grid
         # initially grid is all zeros so should be
@@ -80,7 +81,7 @@ class MyGridModel:
         return self.grid[x, y] == TREASURE
 
     def get_cell(self, x, y):
-        int(self.grid[x, y])
+        return int(self.grid[x, y])
 
     def grid_copy(self):
         return self.grid.copy()

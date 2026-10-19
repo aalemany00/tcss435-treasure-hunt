@@ -31,4 +31,11 @@ a way to reset/regenerate the grid.
 
 ## Running the GUI
 
-TBD - instructions will be added once the GUI is implemented.
+Requirements: Python 3 and NumPy (`pip install numpy`). Tkinter ships with
+standard Python on Windows and Mac.
+
+    python TreasureHuntGUI.py
+
+Click "Regenerate Grid" to place a new random treasure, trap, and walls.
+
+![Sample grid](screenshot.png)
