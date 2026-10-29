@@ -1,6 +1,8 @@
 import tkinter as tk
+from pathlib import Path
+from PIL import Image, ImageTk
 from search import bfs, dfs, ucs
-from TreasureGridModel import MyGridModel, EMPTY, STATIC_WALL, TREASURE, TRAP
+from TreasureGridModel import MyGridModel, EMPTY, START, STATIC_WALL, TREASURE, TRAP
 
 
 class TreasureHuntGUI:
@@ -11,11 +13,17 @@ class TreasureHuntGUI:
         # Gets the grid
         self.model = MyGridModel(10)
         # Set the agent's starting position
-        self.start = (0, 0)
+        self.start = self.model.start
         # Store the path found by a search algorithm
         self.path = None
         # Set grid cell size
         self.cell_size = 60
+
+        # load the image
+        image_path = Path(__file__).parent / "images" / "chess_guy.png"
+        image = Image.open(image_path)
+        image = image.resize((self.cell_size, self.cell_size), Image.Resampling.LANCZOS)
+        self.agent_image = ImageTk.PhotoImage(image)
 
         # Create a canvas to display the grid
         self.canvas = tk.Canvas(
@@ -34,29 +42,30 @@ class TreasureHuntGUI:
             self.button_frame,
             text="Run BFS",
             command=lambda: self.run_search(bfs)
-)
+        )
         self.bfs_button.pack(side=tk.LEFT, padx=5)
 
         self.dfs_button = tk.Button(
             self.button_frame,
             text="Run DFS",
             command=lambda: self.run_search(dfs)
-)
+        )
         self.dfs_button.pack(side=tk.LEFT, padx=5)
 
         self.ucs_button = tk.Button(
             self.button_frame,
             text="Run UCS",
             command=lambda: self.run_search(ucs)
-)
+        )
         self.ucs_button.pack(side=tk.LEFT, padx=5)
+
         # Display search algorithm statistics
         self.stats_label = tk.Label(
             self.root,
             text="Select an algorithm to begin.",
             font=("Arial", 12),
             justify="left"
-)
+        )
         self.stats_label.pack(pady=10)
 
         # Button to regenerate the grid
@@ -126,6 +135,14 @@ class TreasureHuntGUI:
                         font=("Arial", 20, "bold")
                     )
 
+                # for drawing the start image
+                if (row, col) == self.start:
+                    self.canvas.create_image(
+                        (x1 + x2) / 2,
+                        (y1 + y2) / 2,
+                        image=self.agent_image
+                    )
+
 
     def run_search(self, algorithm):
         # Get the treasure's position from the grid model
@@ -144,7 +161,7 @@ class TreasureHuntGUI:
 
         # Print results
         print("Path:", path)
-        print("Path length:", len(path) - 1 if path else "No path found")
+        print("Path cost:", len(path) - 1 if path else "No path found")
         print("Nodes expanded:", nodes_expanded)
         print("Runtime:", runtime)
 
@@ -152,7 +169,7 @@ class TreasureHuntGUI:
         path_length = len(path) - 1 if path else "No path found"
 
         self.stats_label.config(
-            text=f"Path Length: {path_length}\n"
+            text=f"Path cost: {path_length}\n"
                 f"Nodes Expanded: {nodes_expanded}\n"
                 f"Execution Time: {runtime:.6f} seconds"
 )
