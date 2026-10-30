@@ -74,9 +74,6 @@ class MyGridModel:
                 self.wall_positions.add((x, y))
 
 
-        # test generate_grid for later
-        print(self.grid)
-
     def is_static_wall(self, x, y):
         return self.grid[x, y] == STATIC_WALL
 

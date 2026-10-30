@@ -167,7 +167,7 @@ layout here, if available. State whether all moves have equal cost.
 Use your measured results to discuss:  
 
 - Which algorithm returned the lowest path cost?  
-BFS and DFS always tied for path cost because, the cost of a path  
+BFS and UCS always tied for path cost because, the cost of a path  
 is always based on how many squares are traversed.  
   
 
