@@ -172,7 +172,7 @@ is always based on how many squares are traversed.
   
 
 - Which algorithm expanded the fewest nodes?  
-  DFS by far is the algorithm that expanded the most nodes  
+  DFS by far is the algorithm that expanded the least nodes  
   
 
 - Which algorithm had the shortest runtime?  

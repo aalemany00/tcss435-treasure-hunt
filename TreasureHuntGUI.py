@@ -1,7 +1,8 @@
 import tkinter as tk
+from tkinter import messagebox
 from pathlib import Path
 from PIL import Image, ImageTk
-from search import bfs, dfs, ucs
+from search import bfs_steps, dfs_steps, ucs_steps
 from TreasureGridModel import MyGridModel, EMPTY, START, STATIC_WALL, TREASURE, TRAP
 
 
@@ -10,12 +11,35 @@ class TreasureHuntGUI:
         self.root = root
         self.root.title("Treasure Hunt Game")
 
+        # Top bar with the hamburger menu button that opens Custom Grid Setup
+        self.topbar = tk.Frame(self.root)
+        self.topbar.pack(fill="x", padx=10, pady=(10, 0))
+
+        self.menu_button = tk.Button(
+            self.topbar,
+            text="☰",  # hamburger icon (three bars)
+            font=("Arial", 14),
+            width=3,
+            command=self.open_settings_menu
+        )
+        self.menu_button.pack(side=tk.LEFT)
+
+        # Reference to the settings window, so clicking the menu button
+        # twice doesn't open duplicate windows
+        self.settings_window = None
+
         # Gets the grid
         self.model = MyGridModel(10)
         # Set the agent's starting position
         self.start = self.model.start
         # Store the path found by a search algorithm
         self.path = None
+        # Cells visited so far during an in-progress animated search
+        self.visited_cells = []
+        # Delay between animation steps, in milliseconds
+        self.animation_delay_ms = 80
+        # The generator currently driving a running search animation, if any
+        self._search_generator = None
         # Set grid cell size
         self.cell_size = 60
 
@@ -41,21 +65,21 @@ class TreasureHuntGUI:
         self.bfs_button = tk.Button(
             self.button_frame,
             text="Run BFS",
-            command=lambda: self.run_search(bfs)
+            command=lambda: self.run_search(bfs_steps, "BFS")
         )
         self.bfs_button.pack(side=tk.LEFT, padx=5)
 
         self.dfs_button = tk.Button(
             self.button_frame,
             text="Run DFS",
-            command=lambda: self.run_search(dfs)
+            command=lambda: self.run_search(dfs_steps, "DFS")
         )
         self.dfs_button.pack(side=tk.LEFT, padx=5)
 
         self.ucs_button = tk.Button(
             self.button_frame,
             text="Run UCS",
-            command=lambda: self.run_search(ucs)
+            command=lambda: self.run_search(ucs_steps, "UCS")
         )
         self.ucs_button.pack(side=tk.LEFT, padx=5)
 
@@ -79,10 +103,91 @@ class TreasureHuntGUI:
         # Draw the grid
         self.draw_grid()
 
+    def open_settings_menu(self):
+        # If the settings window is already open, just bring it to front
+        # instead of creating a second one
+        if self.settings_window is not None and self.settings_window.winfo_exists():
+            self.settings_window.lift()
+            self.settings_window.focus_force()
+            return
+
+        self.settings_window = tk.Toplevel(self.root)
+        self.settings_window.title("Custom Grid Setup")
+        self.settings_window.resizable(False, False)
+        # Keep it in front of the main window, but not block interacting with it
+        self.settings_window.transient(self.root)
+
+        def labeled_entry(row, label_text, default_value, width=20):
+            tk.Label(self.settings_window, text=label_text).grid(
+                row=row, column=0, sticky="w", padx=10, pady=5
+            )
+            entry = tk.Entry(self.settings_window, width=width)
+            entry.insert(0, default_value)
+            entry.grid(row=row, column=1, sticky="w", padx=10, pady=5)
+            return entry
+
+        self.size_entry = labeled_entry(0, "Grid Size (N):", str(self.model.size), width=6)
+        self.start_entry = labeled_entry(1, "Start (row,col):", "0,0")
+        self.treasure_entry = labeled_entry(2, "Treasure (row,col):", "5,5")
+        self.traps_entry = labeled_entry(3, "Traps (row,col; row,col; ...):", "3,3; 4,4")
+        self.walls_entry = labeled_entry(4, "Walls (row,col; row,col; ...):", "1,1; 1,2; 2,2")
+
+        self.apply_button = tk.Button(
+            self.settings_window,
+            text="Apply Custom Grid",
+            command=self.apply_custom_grid
+        )
+        self.apply_button.grid(row=5, column=0, columnspan=2, pady=(5, 10))
+
+    def _parse_coord(self, text, label):
+        try:
+            row_str, col_str = text.split(",")
+            return (int(row_str.strip()), int(col_str.strip()))
+        except (ValueError, AttributeError):
+            raise ValueError(f"{label} must look like 'row,col', got: {text!r}")
+
+    def _parse_coord_list(self, text, label):
+        text = text.strip()
+        if not text:
+            return []
+        return [self._parse_coord(part, label) for part in text.split(";") if part.strip()]
+
+    def apply_custom_grid(self):
+        try:
+            size = int(self.size_entry.get().strip())
+            if size < 8:
+                raise ValueError("Grid size (N) must be at least 8")
+
+            start = self._parse_coord(self.start_entry.get(), "Start")
+            treasure = self._parse_coord(self.treasure_entry.get(), "Treasure")
+            traps = self._parse_coord_list(self.traps_entry.get(), "Trap")
+            walls = self._parse_coord_list(self.walls_entry.get(), "Wall")
+
+            self.model.set_custom_grid(size, start, treasure, traps, walls)
+        except ValueError as error:
+            messagebox.showerror("Invalid Grid Setup", str(error))
+            return
+
+        # Resize canvas in case grid size changed
+        self.canvas.config(
+            width=self.model.size * self.cell_size,
+            height=self.model.size * self.cell_size
+        )
+
+        self.start = self.model.start
+        self.path = None
+        self.visited_cells = []
+        self.stats_label.config(text="Select an algorithm to begin.")
+        self.draw_grid()
+
+        if self.settings_window is not None and self.settings_window.winfo_exists():
+            self.settings_window.destroy()
+
     def regenerate_grid(self):
         self.model.generate_grid()
-        # Clear the previous search path
+        # Clear the previous search path and visited-cell highlights
         self.path = None
+        self.visited_cells = []
 
         # Reset the statistics display
         self.stats_label.config(
@@ -116,6 +221,10 @@ class TreasureHuntGUI:
                     color = "lightcoral"
                     symbol = "X"
 
+                # Color cells the search has visited so far, while it's animating
+                if color == "white" and (row, col) in self.visited_cells:
+                    color = "lightblue"
+
                     # Should highlight the path without covering walls or treasure
                 if self.path and (row, col) in self.path:
                     if (row, col) != self.start and (row, col) != self.model.treasure_position:
@@ -144,19 +253,51 @@ class TreasureHuntGUI:
                     )
 
 
-    def run_search(self, algorithm):
+    def _set_controls_state(self, state):
+        self.bfs_button.config(state=state)
+        self.dfs_button.config(state=state)
+        self.ucs_button.config(state=state)
+        self.regenerate_button.config(state=state)
+        self.menu_button.config(state=state)
+
+    def run_search(self, algorithm_steps, algorithm_name):
         # Get the treasure's position from the grid model
         goal = self.model.treasure_position
 
-        # Run the selected search algorithm
-        path, nodes_expanded, runtime = algorithm(
-            self.model.grid, self.start, goal
+        # Reset any previous search's visuals
+        self.path = None
+        self.visited_cells = []
+
+        # Lock out other actions while the animation is running
+        self._set_controls_state(tk.DISABLED)
+        self.stats_label.config(text=f"Running {algorithm_name}...")
+
+        self._search_generator = algorithm_steps(self.model.grid, self.start, goal)
+        self._animate_search_step(algorithm_name)
+
+    def _animate_search_step(self, algorithm_name):
+        try:
+            current = next(self._search_generator)
+        except StopIteration as finished:
+            path, nodes_expanded, runtime = finished.value
+            self._finish_search(algorithm_name, path, nodes_expanded, runtime)
+            return
+
+        # Mark this cell as visited, unless it's the start or treasure
+        # (those already have their own fixed appearance)
+        if current != self.start and current != self.model.treasure_position:
+            self.visited_cells.append(current)
+
+        self.draw_grid()
+
+        self.root.after(
+            self.animation_delay_ms,
+            lambda: self._animate_search_step(algorithm_name)
         )
 
+    def _finish_search(self, algorithm_name, path, nodes_expanded, runtime):
         # Store the path so the GUI can highlight it
         self.path = path
-
-        # Redraw the grid with the search result
         self.draw_grid()
 
         # Print results
@@ -169,10 +310,13 @@ class TreasureHuntGUI:
         path_length = len(path) - 1 if path else "No path found"
 
         self.stats_label.config(
-            text=f"Path cost: {path_length}\n"
+            text=f"{algorithm_name} finished\n"
+                f"Path cost: {path_length}\n"
                 f"Nodes Expanded: {nodes_expanded}\n"
                 f"Execution Time: {runtime:.6f} seconds"
-)
+        )
+
+        self._set_controls_state(tk.NORMAL)
 
 
 
