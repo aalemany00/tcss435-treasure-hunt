@@ -41,22 +41,70 @@ class TreasureHuntGUI:
         # The generator currently driving a running search animation, if any
         self._search_generator = None
         # Set grid cell size
-        self.cell_size = 60
+        #self.cell_size = 60
 
-        # load the image
+        # Set grid cell size
+        self.cell_size = 30
+
+        # Load and resize the agent image
         image_path = Path(__file__).parent / "images" / "chess_guy.png"
         image = Image.open(image_path)
-        image = image.resize((self.cell_size, self.cell_size), Image.Resampling.LANCZOS)
+        image = image.resize(
+            (self.cell_size, self.cell_size),
+            Image.Resampling.LANCZOS
+        )
         self.agent_image = ImageTk.PhotoImage(image)
+        # load the image
+        #image_path = Path(__file__).parent / "images" / "chess_guy.png"
+        #image = Image.open(image_path)
+        #image = image.resize((self.cell_size, self.cell_size), Image.Resampling.LANCZOS)
+        #self.agent_image = ImageTk.PhotoImage(image)
+        # Create a frame to hold the grid and its scrollbars
+        self.grid_frame = tk.Frame(self.root)
+        self.grid_frame.pack(padx=10, pady=10)
+
+        # Set a fixed viewing area for the grid
+        viewport_width = min(800, self.root.winfo_screenwidth() - 80)
+        viewport_height = min(500, self.root.winfo_screenheight() - 350)
+
+        # Create horizontal and vertical scrollbars
+        self.horizontal_scrollbar = tk.Scrollbar(
+            self.grid_frame,
+            orient=tk.HORIZONTAL
+        )
+
+        self.vertical_scrollbar = tk.Scrollbar(
+            self.grid_frame,
+            orient=tk.VERTICAL
+        )
+
+        # Create the canvas
+        self.canvas = tk.Canvas(
+            self.grid_frame,
+            width=viewport_width,
+            height=viewport_height,
+            bg="white",
+            xscrollcommand=self.horizontal_scrollbar.set,
+            yscrollcommand=self.vertical_scrollbar.set
+        )
+
+        # Connect scrollbars to the canvas
+        self.horizontal_scrollbar.config(command=self.canvas.xview)
+        self.vertical_scrollbar.config(command=self.canvas.yview)
+
+        # Position the scrollbars and canvas
+        self.horizontal_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        self.vertical_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.canvas.pack(side=tk.LEFT)
 
         # Create a canvas to display the grid
-        self.canvas = tk.Canvas(
-            self.root,
-            width=self.model.size * self.cell_size,
-            height=self.model.size * self.cell_size,
-            bg="white"
-        )
-        self.canvas.pack(padx=20, pady=20)
+        #self.canvas = tk.Canvas(
+        #    self.root,
+        #    width=self.model.size * self.cell_size,
+        #    height=self.model.size * self.cell_size,
+        #    bg="white"
+        #)
+        #self.canvas.pack(padx=20, pady=20)
 
         # Create buttons for each search algorithm
         self.button_frame = tk.Frame(self.root)
@@ -168,12 +216,6 @@ class TreasureHuntGUI:
             messagebox.showerror("Invalid Grid Setup", str(error))
             return
 
-        # Resize canvas in case grid size changed
-        self.canvas.config(
-            width=self.model.size * self.cell_size,
-            height=self.model.size * self.cell_size
-        )
-
         self.start = self.model.start
         self.path = None
         self.visited_cells = []
@@ -251,6 +293,8 @@ class TreasureHuntGUI:
                         (y1 + y2) / 2,
                         image=self.agent_image
                     )
+
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
 
     def _set_controls_state(self, state):
