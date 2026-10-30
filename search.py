@@ -12,6 +12,7 @@ steps on a trap. The treasure cell is the goal and is always enterable.
 """
 
 import time
+import heapq
 from collections import deque
 
 from TreasureGridModel import STATIC_WALL, TRAP
@@ -123,4 +124,50 @@ def dfs(grid, start, goal):
                 if neighbor not in parent:
                     frontier.append((neighbor, current))
  
+    return path, nodes_expanded, time.perf_counter() - start_time
+
+# Uniform Cost Search (UCS)
+
+def ucs(grid, start, goal):
+    """
+    Find the lowest-cost path to the treasure using UCS.
+    Uses a priority queue to explore the cheapest paths first.
+    """
+    start_time = time.perf_counter()
+    nodes_expanded = 0
+    path = None
+
+    if _start_is_valid(grid, start):
+        # Priority queue stores (total_cost, position)
+        frontier = [(0, start)]
+
+        # Keep track of the lowest cost to each position
+        costs = {start: 0}
+        parent = {start: None}
+        visited = set()
+
+        while frontier:
+            current_cost, current = heapq.heappop(frontier)
+
+            # Skip positions that have already been expanded
+            if current in visited:
+                continue
+
+            visited.add(current)
+            nodes_expanded += 1
+
+            # Stop once the treasure is found
+            if current == goal:
+                path = reconstruct_path(parent, goal)
+                break
+
+            # Check all valid neighboring cells
+            for neighbor in get_neighbors(grid, current):
+                new_cost = current_cost + 1
+
+                if neighbor not in costs or new_cost < costs[neighbor]:
+                    costs[neighbor] = new_cost
+                    parent[neighbor] = current
+                    heapq.heappush(frontier, (new_cost, neighbor))
+
     return path, nodes_expanded, time.perf_counter() - start_time

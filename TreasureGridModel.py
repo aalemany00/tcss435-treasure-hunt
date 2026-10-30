@@ -4,38 +4,47 @@ import numpy as np
 
 # Cell type constants
 EMPTY = 0
-STATIC_WALL = 1
-TREASURE = 2
-TRAP = 3
+START = 1
+STATIC_WALL = 2
+TREASURE = 3
+TRAP = 4
 
 class MyGridModel:
     def __init__(self, n=8):
         self.size = n
 
+        self.start = None
         self.treasure_position = None
         self.trap_position = None
+
         self.wall_positions = set()
         self.grid = np.zeros((self.size, self.size), dtype=int)
         self.generate_grid()
 
     def generate_grid(self):
-        """
-        for row in range(self.size):
-            for column in range(self.size):
-                self.grid[row, column] = column
-        """
         generate_random_2d_int_coordinate \
             = lambda: (random.randint(0, self.size - 1), random.randint(0, self.size - 1))
 
         self.grid = np.zeros((self.size, self.size), dtype=int)
         self.wall_positions = set()
 
+        # place start position.
+        # fixed to (0, 0).
+        self.start = (0, 0)
+        x, y = self.start
+        self.grid[x, y] = START
+
         # place treasure position on grid
-        # initially grid is all zeros so should be
-        # safe to randomly generate 2d coord without checking if EMPTY
         self.treasure_position = generate_random_2d_int_coordinate()
         x, y = self.treasure_position
-        self.grid[x, y] = TREASURE
+
+        if self.grid[x, y] == EMPTY:
+            self.grid[x, y] = TREASURE
+        else: # keep looking for empty position in grid to place treasure
+            while self.grid[x, y] != EMPTY:
+                x, y = generate_random_2d_int_coordinate()
+            self.grid[x, y] = TREASURE
+            self.treasure_position = (x, y)
 
         # place trap position on grid
         self.trap_position = generate_random_2d_int_coordinate()
@@ -66,7 +75,7 @@ class MyGridModel:
 
 
         # test generate_grid for later
-        #print(self.grid)
+        print(self.grid)
 
     def is_static_wall(self, x, y):
         return self.grid[x, y] == STATIC_WALL
