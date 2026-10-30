@@ -90,6 +90,40 @@ def bfs(grid, start, goal):
     return path, nodes_expanded, time.perf_counter() - start_time
 
 
+def bfs_steps(grid, start, goal):
+    """
+    Generator version of bfs() for step-by-step GUI animation.
+
+    Yields each position as it is expanded (visited), one at a time, so the
+    caller can redraw between steps. When the search is finished, the
+    generator returns (path, nodes_expanded, runtime) via StopIteration.value
+    -- same result bfs() returns directly.
+    """
+    start_time = time.perf_counter()
+    nodes_expanded = 0
+    path = None
+
+    if _start_is_valid(grid, start):
+        frontier = deque([start])
+        parent = {start: None}
+
+        while frontier:
+            current = frontier.popleft()
+            nodes_expanded += 1
+            yield current
+
+            if current == goal:
+                path = reconstruct_path(parent, goal)
+                break
+
+            for neighbor in get_neighbors(grid, current):
+                if neighbor not in parent:
+                    parent[neighbor] = current
+                    frontier.append(neighbor)
+
+    return path, nodes_expanded, time.perf_counter() - start_time
+
+
 # Depth-First Search (DFS)
 
 def dfs(grid, start, goal):
@@ -123,7 +157,37 @@ def dfs(grid, start, goal):
             for neighbor in reversed(get_neighbors(grid, current)):
                 if neighbor not in parent:
                     frontier.append((neighbor, current))
- 
+
+    return path, nodes_expanded, time.perf_counter() - start_time
+
+
+def dfs_steps(grid, start, goal):
+    """Generator version of dfs() for step-by-step GUI animation. See bfs_steps()."""
+    start_time = time.perf_counter()
+    nodes_expanded = 0
+    path = None
+
+    if _start_is_valid(grid, start):
+        frontier = [(start, None)]
+        parent = {}
+
+        while frontier:
+            current, came_from = frontier.pop()
+            if current in parent:
+                continue
+
+            parent[current] = came_from
+            nodes_expanded += 1
+            yield current
+
+            if current == goal:
+                path = reconstruct_path(parent, goal)
+                break
+
+            for neighbor in reversed(get_neighbors(grid, current)):
+                if neighbor not in parent:
+                    frontier.append((neighbor, current))
+
     return path, nodes_expanded, time.perf_counter() - start_time
 
 # Uniform Cost Search (UCS)
@@ -162,6 +226,43 @@ def ucs(grid, start, goal):
                 break
 
             # Check all valid neighboring cells
+            for neighbor in get_neighbors(grid, current):
+                new_cost = current_cost + 1
+
+                if neighbor not in costs or new_cost < costs[neighbor]:
+                    costs[neighbor] = new_cost
+                    parent[neighbor] = current
+                    heapq.heappush(frontier, (new_cost, neighbor))
+
+    return path, nodes_expanded, time.perf_counter() - start_time
+
+
+def ucs_steps(grid, start, goal):
+    """Generator version of ucs() for step-by-step GUI animation. See bfs_steps()."""
+    start_time = time.perf_counter()
+    nodes_expanded = 0
+    path = None
+
+    if _start_is_valid(grid, start):
+        frontier = [(0, start)]
+        costs = {start: 0}
+        parent = {start: None}
+        visited = set()
+
+        while frontier:
+            current_cost, current = heapq.heappop(frontier)
+
+            if current in visited:
+                continue
+
+            visited.add(current)
+            nodes_expanded += 1
+            yield current
+
+            if current == goal:
+                path = reconstruct_path(parent, goal)
+                break
+
             for neighbor in get_neighbors(grid, current):
                 new_cost = current_cost + 1
 

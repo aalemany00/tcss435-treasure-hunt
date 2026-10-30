@@ -91,3 +91,44 @@ class MyGridModel:
 
     def grid_copy(self):
         return self.grid.copy()
+
+    def set_custom_grid(self, size, start, treasure, traps, walls):
+        """
+        Build the grid from explicit (row, col) positions instead of random
+        placement, for demo/presentation setups. `traps` and `walls` are
+        lists of (row, col) tuples. Raises ValueError if any position is
+        out of bounds or overlaps another.
+        """
+        labeled_positions = [("start", start), ("treasure", treasure)]
+        labeled_positions += [("trap", pos) for pos in traps]
+        labeled_positions += [("wall", pos) for pos in walls]
+        
+        seen = {}
+        for label, (row, col) in labeled_positions:
+            if not (0 <= row < size and 0 <= col < size):
+                raise ValueError(f"{label} position {row, col} is outside the {size}x{size} grid")
+            if (row, col) in seen:
+                raise ValueError(f"{label} position {(row, col)} overlaps with {seen[(row, col)]}")
+            seen[(row, col)] = label
+        
+        self.size = size
+        self.grid = np.zeros((self.size, self.size), dtype=int)
+        self.wall_positions = set()
+        
+        self.start = start
+        self.treasure_position = treasure
+        self.trap_positions = list(traps)
+        self.trap_position = traps[0] if traps else None # Kept for backward compatibility
+        
+        row, col = start
+        self.grid[row, col] = START
+        
+        row, col = treasure
+        self.grid[row, col] = TREASURE
+        
+        for row, col in traps:
+            self.grid[row, col] = TRAP
+            
+        for row, col in walls:
+            self.grid[row, col] = STATIC_WALL
+            self.wall_positions.add((row, col))
