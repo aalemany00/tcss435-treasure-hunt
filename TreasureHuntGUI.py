@@ -40,32 +40,21 @@ class TreasureHuntGUI:
         self.animation_delay_ms = 80
         # The generator currently driving a running search animation, if any
         self._search_generator = None
-        # Set grid cell size
-        #self.cell_size = 60
 
-        # Set grid cell size
-        self.cell_size = 30
-
-        # Load and resize the agent image
+        # Load the original agent image
         image_path = Path(__file__).parent / "images" / "chess_guy.png"
-        image = Image.open(image_path)
-        image = image.resize(
-            (self.cell_size, self.cell_size),
-            Image.Resampling.LANCZOS
-        )
-        self.agent_image = ImageTk.PhotoImage(image)
-        # load the image
-        #image_path = Path(__file__).parent / "images" / "chess_guy.png"
-        #image = Image.open(image_path)
-        #image = image.resize((self.cell_size, self.cell_size), Image.Resampling.LANCZOS)
-        #self.agent_image = ImageTk.PhotoImage(image)
+        self.agent_original_image = Image.open(image_path)
+
+        # Set cell size based on grid dimensions
+        self.update_cell_size()
+
         # Create a frame to hold the grid and its scrollbars
         self.grid_frame = tk.Frame(self.root)
         self.grid_frame.pack(padx=10, pady=10)
 
         # Set a fixed viewing area for the grid
         viewport_width = min(800, self.root.winfo_screenwidth() - 80)
-        viewport_height = min(500, self.root.winfo_screenheight() - 350)
+        viewport_height = min(650, self.root.winfo_screenheight() - 300)
 
         # Create horizontal and vertical scrollbars
         self.horizontal_scrollbar = tk.Scrollbar(
@@ -96,15 +85,6 @@ class TreasureHuntGUI:
         self.horizontal_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.vertical_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.canvas.pack(side=tk.LEFT)
-
-        # Create a canvas to display the grid
-        #self.canvas = tk.Canvas(
-        #    self.root,
-        #    width=self.model.size * self.cell_size,
-        #    height=self.model.size * self.cell_size,
-        #    bg="white"
-        #)
-        #self.canvas.pack(padx=20, pady=20)
 
         # Create buttons for each search algorithm
         self.button_frame = tk.Frame(self.root)
@@ -150,6 +130,22 @@ class TreasureHuntGUI:
 
         # Draw the grid
         self.draw_grid()
+
+    def update_cell_size(self):
+        if self.model.size <= 10:
+            self.cell_size = 60
+        elif self.model.size <= 20:
+            self.cell_size = 40
+        elif self.model.size <= 50:
+            self.cell_size = 30
+        else:
+            self.cell_size = 20
+
+        image = self.agent_original_image.resize(
+            (self.cell_size, self.cell_size),
+            Image.Resampling.LANCZOS
+        )
+        self.agent_image = ImageTk.PhotoImage(image)
 
     def open_settings_menu(self):
         # If the settings window is already open, just bring it to front
@@ -219,6 +215,10 @@ class TreasureHuntGUI:
         self.start = self.model.start
         self.path = None
         self.visited_cells = []
+
+        # Adjust cell size for the newly selected grid
+        self.update_cell_size()
+
         self.stats_label.config(text="Select an algorithm to begin.")
         self.draw_grid()
 
@@ -283,7 +283,8 @@ class TreasureHuntGUI:
                         (x1 + x2) / 2,
                         (y1 + y2) / 2,
                         text=symbol,
-                        font=("Arial", 20, "bold")
+                        #font=("Arial", 20, "bold")
+                        font=("Arial", max(10, self.cell_size // 2), "bold")
                     )
 
                 # for drawing the start image
