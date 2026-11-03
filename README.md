@@ -11,7 +11,7 @@ AI search and decision-making techniques.
 |--------|-------------------------------------------------------------------------------|
 | Adrian | GitHub setup, reset/regenerate functionality, README and submission packaging |
 | Aramis | GUI rendering (colors, symbols, layout)                                       |
-| Dylon  | Grid setup and random placement, udapdating REAMDME, fix minor bugs           |
+| Dylon  | Grid setup and random placement, updating REAMDME, fix minor bugs             |
 
 
 ## Requirements
@@ -108,11 +108,11 @@ to reconstruct the path from the start to the treasure.
 ### Experiments and Results (start is image at top left corner / (x, y) = (0, 0))
 - Experiment 1:  
 
-| Algorithm | Path cost | Nodes expanded | Runtime (ms) |
-|-----------|----------:|---------------:|-------------:|
-| BFS       |        17 |             93 |     0.000220 |
-| DFS       |        69 |             77 |     0.000197 |
-| UCS       |        17 |             93 |     0.000381 |  
+| Algorithm | Path cost | Nodes expanded | Runtime (sec) |
+|-----------|----------:|---------------:|--------------:|
+| BFS       |         8 |             29 |      2.434220 |
+| DFS       |        14 |             23 |      1.925177 |
+| UCS       |         8 |             33 |      2.780746 |  
 
 <p>BFS</p>  
 <img src = "/images/experiment_1_bfs.png" alt="">  
@@ -123,11 +123,11 @@ to reconstruct the path from the start to the treasure.
 
 - Experiment 2:  
 
-| Algorithm | Path cost | Nodes expanded | Runtime (ms) |
-|-----------|----------:|---------------:|-------------:|
-| BFS       |         9 |             47 |     0.000219 |
-| DFS       |        35 |             36 |     0.000192 |
-| UCS       |         9 |             48 |     0.000197 |  
+| Algorithm | Path cost | Nodes expanded | Runtime (sec) |
+|-----------|----------:|---------------:|--------------:|
+| BFS       |        18 |             94 |      7.916413 |
+| DFS       |        60 |             84 |      7.072630 |
+| UCS       |        18 |             94 |      7.925289 |  
 
 <p>BFS</p>  
 <img src = "/images/experiment_2_bfs.png" alt="">  
@@ -138,11 +138,11 @@ to reconstruct the path from the start to the treasure.
 
 - Experiment 3:  
 
-| Algorithm | Path cost | Nodes expanded | Runtime (ms) |
+| Algorithm | Path cost | Nodes expanded | Runtime (sec) |
 |-----------|----------:|---------------:|-------------:|
-| BFS       |        11 |             57 |     0.000068 |
-| DFS       |        13 |             14 |     0.000071 |
-| UCS       |        11 |             65 |     0.000192 |  
+| BFS       |         9 |             47 |     3.958120 |
+| DFS       |        47 |             60 |     5.056451 |
+| UCS       |         9 |             40 |     3.357781 |  
 
 <p>BFS</p>  
 <img src = "/images/experiment_3_bfs.png" alt="">  
@@ -153,18 +153,15 @@ to reconstruct the path from the start to the treasure.
   
 - Averages  
 
-| Algorithm | Average Path cost | Average Nodes expanded | Avergae Runtime (ms) |
+| Algorithm | Average Path cost | Average Nodes expanded | Avergae Runtime (sec) |
 |-----------|------------------:|-----------------------:|---------------------:|
-| DFS       |                39 |                     42 |             0.000153 |
-| BFS       |                12 |                     65 |             0.000169 |
-| UCS       |                12 |                     68 |             0.000256 |  
+| DFS       |                40 |                     55 |             4.684753 |
+| BFS       |                11 |                     56 |             4.769584 |
+| UCS       |                11 |                     55 |             4.687939 |  
 
-**Grid/experiment notes:** Record the grid seed or describe the generated
-layout here, if available. State whether all moves have equal cost.
 
-### Discussion
+### Discussion of Results
 
-Use your measured results to discuss:  
 
 - Which algorithm returned the lowest path cost?  
 BFS and UCS always tied for path cost because, the cost of a path  
@@ -172,25 +169,32 @@ is always based on how many squares are traversed.
   
 
 - Which algorithm expanded the fewest nodes?  
-  DFS by far is the algorithm that expanded the most nodes  
-  
+  All three algorithms appeared to expand the same amount of nodes  
+however, given the grid is only 10x10 the results are somewhat misleading.  
+Further experimentation would be needed on much bigger grids to determine  
+the differences in expanded nodes amongst BFS, DFS, and UCS.  
+
 
 - Which algorithm had the shortest runtime?  
-  Overall, DFS ran shorter. This is rather misleading given that DFS with a much bigger  
+  Overall, DFS ran a bit shorter. This is rather misleading given that DFS with a much bigger  
 grid should run slower but, because the grid is 10x10 the runtime seems trivial  
 since all three algorithms do not need to traverse much to find the treasure.
 
 ## Sample GUI screenshot
 
-![Grid with a sample search result highlighted](/images/sample_gui_screenshot.png)
+![Grid with a sample search result highlighted](/images/sample_gui_result.png)
 
 
 ## Generative AI Statement
 
 1. What was used: ChatGPT  
 How it was used: to make png image appear on the start position  
-Which parts of the work are original vs. AI-assisted: lines 21-25 and 2-3 of TreasureHuntHUI were AI-assisted  
-for importing appropriate libs and loading and sizing image.
+Which parts of the work are original vs. AI-assisted: lines 45-46 and 4-5  
+for importing appropriate libs and loading and sizing image.  
+2. What was used: ChatGPT  
+How it was used: help with resizing increasing grid sizes 10x10, 20x20 and bigger  
+to help make the view of the grid not take up too much space so that buttons are  
+still accessible.
 
 ## Workflow
 
