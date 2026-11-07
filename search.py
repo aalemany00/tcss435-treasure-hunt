@@ -415,3 +415,100 @@ def greedy_best_first_steps(grid, start, goal, heuristic=manhattan_distance, heu
             yield current
 
     return path, nodes_expanded, elapsed
+
+def a_star(grid, start, goal, heuristic=manhattan_distance, heuristic_log=None):
+    start_time = time.perf_counter()
+    nodes_expanded = 0
+    path = None
+
+    goal_not_found = True
+    start_valid = _start_is_valid(grid, start)
+
+    h = heuristic(start, goal)
+    frontier = [(h, 0, start)]
+    costs = {start: 0}
+    parent = {start: None}
+    visited = set()
+
+    f_cost, current_cost, current = heapq.heappop(frontier)
+    if heuristic_log is not None:
+        heuristic_log[start] = h
+
+    while start_valid and goal_not_found: # fails right away when start is not valid, else continue finding goal.
+        if current not in visited:
+            for neighbor in get_neighbors(grid, current):
+                new_cost = current_cost + move_cost(grid, *neighbor)
+                if neighbor not in costs or new_cost < costs[neighbor]:
+                    costs[neighbor] = new_cost
+                    parent[neighbor] = current
+
+                    h = heuristic(neighbor, goal)
+                    f_cost = new_cost + h
+
+                    heapq.heappush(frontier, (f_cost, new_cost, neighbor))
+
+                    if heuristic_log is not None:
+                        heuristic_log[neighbor] = h
+
+            visited.add(current)
+            nodes_expanded += 1
+
+        f_cost, current_cost, current = heapq.heappop(frontier)
+
+        if current == goal:
+            path = reconstruct_path(parent, goal)
+            goal_not_found = False
+
+    elapsed = time.perf_counter() - start_time
+
+    return path, nodes_expanded, elapsed
+
+def a_star_steps(grid, start, goal, heuristic=manhattan_distance, heuristic_log=None):
+    start_time = time.perf_counter()
+    nodes_expanded = 0
+    path = None
+
+    goal_not_found = True
+    start_valid = _start_is_valid(grid, start)
+
+    h = heuristic(start, goal)
+    frontier = [(h, 0, start)]
+    costs = {start: 0}
+    parent = {start: None}
+    visited = set()
+
+    if heuristic_log is not None:
+        heuristic_log[start] = h
+
+    while start_valid and goal_not_found and frontier:
+        f_cost, current_cost, current = heapq.heappop(frontier)
+
+        if current not in visited:
+            # Yield the current position so the GUI can animate it.
+            yield current, nodes_expanded
+
+            for neighbor in get_neighbors(grid, current):
+                new_cost = current_cost + move_cost(grid, *neighbor)
+
+                if neighbor not in costs or new_cost < costs[neighbor]:
+                    costs[neighbor] = new_cost
+                    parent[neighbor] = current
+
+                    h = heuristic(neighbor, goal)
+                    f_cost = new_cost + h
+
+                    heapq.heappush(frontier, (f_cost, new_cost, neighbor))
+
+                    if heuristic_log is not None:
+                        heuristic_log[neighbor] = h
+
+            visited.add(current)
+            nodes_expanded += 1
+
+        if current == goal:
+            path = reconstruct_path(parent, goal)
+            goal_not_found = False
+
+    elapsed = time.perf_counter() - start_time
+
+    return path, nodes_expanded, elapsed
