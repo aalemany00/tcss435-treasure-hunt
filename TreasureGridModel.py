@@ -92,17 +92,21 @@ class MyGridModel:
     def grid_copy(self):
         return self.grid.copy()
 
-    def set_custom_grid(self, size, start, treasure, traps, walls):
+    def set_custom_grid(self, size, start, treasures, traps, walls):
         """
         Build the grid from explicit (row, col) positions instead of random
-        placement, for demo/presentation setups. `traps` and `walls` are
-        lists of (row, col) tuples. Raises ValueError if any position is
-        out of bounds or overlaps another.
+        placement, for demo/presentation setups. `treasures`, `traps`, and
+        `walls` are lists of (row, col) tuples. Raises ValueError if any
+        position is out of bounds, overlaps another, or no treasure is given.
         """
-        labeled_positions = [("start", start), ("treasure", treasure)]
+        if not treasures:
+            raise ValueError("At least one treasure is required")
+
+        labeled_positions = [("start", start)]
+        labeled_positions += [("treasure", pos) for pos in treasures]
         labeled_positions += [("trap", pos) for pos in traps]
         labeled_positions += [("wall", pos) for pos in walls]
-        
+
         seen = {}
         for label, (row, col) in labeled_positions:
             if not (0 <= row < size and 0 <= col < size):
@@ -110,25 +114,26 @@ class MyGridModel:
             if (row, col) in seen:
                 raise ValueError(f"{label} position {(row, col)} overlaps with {seen[(row, col)]}")
             seen[(row, col)] = label
-        
+
         self.size = size
         self.grid = np.zeros((self.size, self.size), dtype=int)
         self.wall_positions = set()
-        
+
         self.start = start
-        self.treasure_position = treasure
+        self.treasure_positions = list(treasures)
+        self.treasure_position = treasures[0] if treasures else None  # kept for backward compatibility
         self.trap_positions = list(traps)
-        self.trap_position = traps[0] if traps else None # Kept for backward compatibility
-        
+        self.trap_position = traps[0] if traps else None  # kept for backward compatibility
+
         row, col = start
         self.grid[row, col] = START
-        
-        row, col = treasure
-        self.grid[row, col] = TREASURE
-        
+
+        for row, col in treasures:
+            self.grid[row, col] = TREASURE
+
         for row, col in traps:
             self.grid[row, col] = TRAP
-            
+
         for row, col in walls:
             self.grid[row, col] = STATIC_WALL
             self.wall_positions.add((row, col))
