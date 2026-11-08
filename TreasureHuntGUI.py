@@ -27,7 +27,7 @@ class TreasureHuntGUI:
 
         self.settings_window = None
 
-        self.model = MyGridModel(10)
+        self.model = MyGridModel(20)
         self.start = self.model.start
         self.path = None
         self.visited_cells = []

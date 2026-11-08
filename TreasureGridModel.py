@@ -34,29 +34,38 @@ class MyGridModel:
         x, y = self.start
         self.grid[x, y] = START
 
-        # place treasure position on grid
-        self.treasure_position = generate_random_2d_int_coordinate()
-        x, y = self.treasure_position
+        # Place 2-3 treasures randomly on the grid
+        self.treasure_positions = []
+        treasure_count = random.randint(2, 3)
 
-        if self.grid[x, y] == EMPTY:
-            self.grid[x, y] = TREASURE
-        else: # keep looking for empty position in grid to place treasure
+        for i in range(treasure_count):
+            x, y = generate_random_2d_int_coordinate()
+
+            # Keep searching until we find an empty cell
             while self.grid[x, y] != EMPTY:
                 x, y = generate_random_2d_int_coordinate()
+
             self.grid[x, y] = TREASURE
-            self.treasure_position = (x, y)
+            self.treasure_positions.append((x, y))
 
-        # place trap position on grid
-        self.trap_position = generate_random_2d_int_coordinate()
-        x, y = self.trap_position
+        # Keep the first treasure for compatibility with older code
+        self.treasure_position = self.treasure_positions[0]
 
-        if self.grid[x, y] == EMPTY:
-            self.grid[x, y] = TRAP
-        else: # keep looking for empty position in grid to place trap
+        # Place exactly 2 traps randomly on the grid
+        self.trap_positions = []
+
+        for i in range(2):
+            x, y = generate_random_2d_int_coordinate()
+
+            # Keep looking until we find an empty cell
             while self.grid[x, y] != EMPTY:
                 x, y = generate_random_2d_int_coordinate()
+
             self.grid[x, y] = TRAP
-            self.trap_position = (x, y)
+            self.trap_positions.append((x, y))
+
+
+        self.trap_position = self.trap_positions[0]
 
         # place static wall positions on grid
         static_wall_amount = self.size // 2 # amount of static walls is half of linear spaces n using integer division
