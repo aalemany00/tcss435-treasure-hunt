@@ -3,7 +3,7 @@ from tkinter import messagebox
 from pathlib import Path
 from PIL import Image, ImageTk
 from search import bfs_steps, dfs_steps, ucs_steps, greedy_best_first_steps, a_star_steps, compute_path_cost, count_traps_triggered
-from heuristics import manhattan_distance, closest_treasure
+from heuristics import manhattan_distance, euclidean_distance
 from TreasureGridModel import MyGridModel, EMPTY, START, STATIC_WALL, TREASURE, TRAP
 
 
@@ -52,8 +52,10 @@ class TreasureHuntGUI:
         self.ucs_button.pack(side=tk.LEFT, padx=5)
         self.greedy_button = tk.Button(self.button_frame, text="Run Greedy", command=self.run_greedy_search)
         self.greedy_button.pack(side=tk.LEFT, padx=5)
-        self.astar_button = tk.Button(self.button_frame, text="Run A*", command=self.run_astar_search)
-        self.astar_button.pack(side=tk.LEFT, padx=5)
+        self.astar_manhattan_button = tk.Button(self.button_frame, text="Run A* (Manhattan)", command=lambda: self.run_astar_search(manhattan_distance, "Manhattan"))
+        self.astar_manhattan_button.pack(side=tk.LEFT, padx=5)
+        self.astar_euclidean_button = tk.Button(self.button_frame, text="Run A* (Euclidean)", command=lambda: self.run_astar_search(euclidean_distance, "Euclidean"))
+        self.astar_euclidean_button.pack(side=tk.LEFT, padx=5)
 
         self.regenerate_button = tk.Button(self.root, text="Regenerate Grid", command=self.regenerate_grid)
         self.regenerate_button.pack(side=tk.BOTTOM, pady=(0, 15))
@@ -274,13 +276,14 @@ class TreasureHuntGUI:
         self.bfs_button.config(state=state)
         self.dfs_button.config(state=state)
         self.ucs_button.config(state=state)
-        self.greedy_button.config(state=state)  
-        self.astar_button.config(state=state) 
+        self.greedy_button.config(state=state)
+        self.astar_manhattan_button.config(state=state)
+        self.astar_euclidean_button.config(state=state)
         self.regenerate_button.config(state=state)
         self.menu_button.config(state=state)
 
     def run_search(self, algorithm_steps, algorithm_name):
-        goal = closest_treasure(self.start, self._get_treasure_positions())
+        goal = self._get_treasure_positions()
 
         # Reset any previous search's visuals
         self.path = None
@@ -366,13 +369,11 @@ class TreasureHuntGUI:
         return []
 
     def run_greedy_search(self):
-        treasures = self._get_treasure_positions()
-        goal = closest_treasure(self.start, treasures)
+        goal = self._get_treasure_positions()
 
         self.path = None
         self.visited_cells = []
         self._heuristic_log = {}
-        self._greedy_goal = goal
 
         self._set_controls_state(tk.DISABLED)
         self.stats_label.config(text="Running Greedy Best-First Search...")
@@ -409,9 +410,8 @@ class TreasureHuntGUI:
             path_cost = "No path found"
             traps_triggered = 0
 
-        start_heuristic = self._heuristic_log.get(
-            self.start, manhattan_distance(self.start, self._greedy_goal)
-        )
+        reached_treasure = path[-1] if path else None
+        start_heuristic = self._heuristic_log.get(self.start)
 
         print("Path:", path)
         print("Path cost:", path_cost)
@@ -421,7 +421,7 @@ class TreasureHuntGUI:
 
         self.stats_label.config(
             text=f"Greedy Best-First Search finished\n"
-                f"Goal treasure: {self._greedy_goal}\n"
+                f"Goal treasure: {reached_treasure}\n"
                 f"Path cost: {path_cost}\n"
                 f"Nodes Expanded: {nodes_expanded}\n"
                 f"Execution Time: {runtime:.6f} seconds\n"
@@ -432,21 +432,20 @@ class TreasureHuntGUI:
 
         self._set_controls_state(tk.NORMAL)
         
-    def run_astar_search(self):
-        treasures = self._get_treasure_positions()
-        goal = closest_treasure(self.start, treasures)
+    def run_astar_search(self, heuristic, heuristic_name):
+        goal = self._get_treasure_positions()
 
         self.path = None
         self.visited_cells = []
         self._heuristic_log = {}
-        self._astar_goal = goal
+        self._astar_heuristic_name = heuristic_name
 
         self._set_controls_state(tk.DISABLED)
-        self.stats_label.config(text="Running A* Search...")
+        self.stats_label.config(text=f"Running A* Search ({heuristic_name})...")
 
         self._search_generator = a_star_steps(
             self.model.grid, self.start, goal,
-            heuristic=manhattan_distance,
+            heuristic=heuristic,
             heuristic_log=self._heuristic_log
         )
         self._animate_astar_step()
@@ -476,9 +475,8 @@ class TreasureHuntGUI:
             path_cost = "No path found"
             traps_triggered = 0
 
-        start_heuristic = self._heuristic_log.get(
-            self.start, manhattan_distance(self.start, self._astar_goal)
-        )
+        reached_treasure = path[-1] if path else None
+        start_heuristic = self._heuristic_log.get(self.start)
 
         print("Path:", path)
         print("Path cost:", path_cost)
@@ -487,13 +485,13 @@ class TreasureHuntGUI:
         print("Heuristic values computed:", self._heuristic_log)
 
         self.stats_label.config(
-            text=f"A* Search finished\n"
-                f"Goal treasure: {self._astar_goal}\n"
+            text=f"A* Search ({self._astar_heuristic_name}) finished\n"
+                f"Goal treasure: {reached_treasure}\n"
                 f"Path cost: {path_cost}\n"
                 f"Nodes Expanded: {nodes_expanded}\n"
                 f"Execution Time: {runtime:.6f} seconds\n"
                 f"Traps Triggered: {traps_triggered}\n"
-                f"Start heuristic (Manhattan to goal): {start_heuristic}\n"
+                f"Start heuristic ({self._astar_heuristic_name} to goal): {start_heuristic}\n"
                 f"Heuristic values computed: {len(self._heuristic_log)}"
         )
 
