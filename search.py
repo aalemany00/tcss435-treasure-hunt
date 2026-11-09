@@ -434,7 +434,7 @@ def a_star(grid, start, goal, heuristic=manhattan_distance, heuristic_log=None):
     if heuristic_log is not None:
         heuristic_log[start] = h
 
-    while start_valid and goal_not_found: # fails right away when start is not valid, else continue finding goal.
+    while start_valid and goal_not_found and frontier: # fails right away when start is not valid, else continue finding goal.
         if current not in visited:
             for neighbor in get_neighbors(grid, current):
                 new_cost = current_cost + move_cost(grid, *neighbor)
@@ -485,7 +485,7 @@ def a_star_steps(grid, start, goal, heuristic=manhattan_distance, heuristic_log=
 
         if current not in visited:
             # Yield the current position so the GUI can animate it.
-            yield current, nodes_expanded
+            yield current
 
             for neighbor in get_neighbors(grid, current):
                 new_cost = current_cost + move_cost(grid, *neighbor)

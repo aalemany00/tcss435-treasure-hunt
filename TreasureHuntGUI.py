@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from pathlib import Path
 from PIL import Image, ImageTk
-from search import bfs_steps, dfs_steps, ucs_steps, greedy_best_first_steps, compute_path_cost, count_traps_triggered
+from search import bfs_steps, dfs_steps, ucs_steps, greedy_best_first_steps, a_star_steps, compute_path_cost, count_traps_triggered
 from heuristics import manhattan_distance, closest_treasure
 from TreasureGridModel import MyGridModel, EMPTY, START, STATIC_WALL, TREASURE, TRAP
 
@@ -52,6 +52,8 @@ class TreasureHuntGUI:
         self.ucs_button.pack(side=tk.LEFT, padx=5)
         self.greedy_button = tk.Button(self.button_frame, text="Run Greedy", command=self.run_greedy_search)
         self.greedy_button.pack(side=tk.LEFT, padx=5)
+        self.astar_button = tk.Button(self.button_frame, text="Run A*", command=self.run_astar_search)
+        self.astar_button.pack(side=tk.LEFT, padx=5)
 
         self.regenerate_button = tk.Button(self.root, text="Regenerate Grid", command=self.regenerate_grid)
         self.regenerate_button.pack(side=tk.BOTTOM, pady=(0, 15))
@@ -272,7 +274,8 @@ class TreasureHuntGUI:
         self.bfs_button.config(state=state)
         self.dfs_button.config(state=state)
         self.ucs_button.config(state=state)
-        self.greedy_button.config(state=state)   
+        self.greedy_button.config(state=state)  
+        self.astar_button.config(state=state) 
         self.regenerate_button.config(state=state)
         self.menu_button.config(state=state)
 
@@ -419,6 +422,73 @@ class TreasureHuntGUI:
         self.stats_label.config(
             text=f"Greedy Best-First Search finished\n"
                 f"Goal treasure: {self._greedy_goal}\n"
+                f"Path cost: {path_cost}\n"
+                f"Nodes Expanded: {nodes_expanded}\n"
+                f"Execution Time: {runtime:.6f} seconds\n"
+                f"Traps Triggered: {traps_triggered}\n"
+                f"Start heuristic (Manhattan to goal): {start_heuristic}\n"
+                f"Heuristic values computed: {len(self._heuristic_log)}"
+        )
+
+        self._set_controls_state(tk.NORMAL)
+        
+    def run_astar_search(self):
+        treasures = self._get_treasure_positions()
+        goal = closest_treasure(self.start, treasures)
+
+        self.path = None
+        self.visited_cells = []
+        self._heuristic_log = {}
+        self._astar_goal = goal
+
+        self._set_controls_state(tk.DISABLED)
+        self.stats_label.config(text="Running A* Search...")
+
+        self._search_generator = a_star_steps(
+            self.model.grid, self.start, goal,
+            heuristic=manhattan_distance,
+            heuristic_log=self._heuristic_log
+        )
+        self._animate_astar_step()
+
+    def _animate_astar_step(self):
+        try:
+            current = next(self._search_generator)
+        except StopIteration as finished:
+            path, nodes_expanded, runtime = finished.value
+            self._finish_astar_search(path, nodes_expanded, runtime)
+            return
+
+        if current != self.start and current not in self._get_treasure_positions():
+            self.visited_cells.append(current)
+
+        self.draw_grid()
+        self.root.after(self.animation_delay_ms, self._animate_astar_step)
+
+    def _finish_astar_search(self, path, nodes_expanded, runtime):
+        self.path = path
+        self.draw_grid()
+
+        if path:
+            path_cost = compute_path_cost(self.model.grid, path)
+            traps_triggered = count_traps_triggered(self.model.grid, path)
+        else:
+            path_cost = "No path found"
+            traps_triggered = 0
+
+        start_heuristic = self._heuristic_log.get(
+            self.start, manhattan_distance(self.start, self._astar_goal)
+        )
+
+        print("Path:", path)
+        print("Path cost:", path_cost)
+        print("Nodes expanded:", nodes_expanded)
+        print("Runtime:", runtime)
+        print("Heuristic values computed:", self._heuristic_log)
+
+        self.stats_label.config(
+            text=f"A* Search finished\n"
+                f"Goal treasure: {self._astar_goal}\n"
                 f"Path cost: {path_cost}\n"
                 f"Nodes Expanded: {nodes_expanded}\n"
                 f"Execution Time: {runtime:.6f} seconds\n"
