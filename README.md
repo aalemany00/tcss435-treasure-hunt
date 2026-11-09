@@ -245,13 +245,13 @@ algorithm's actual speed.
 
 ### Experiments and Results (grid is 20x20 for all three experiments)
 
-- Experiment 1 (plain random grid -- typical case, 3 treasures, 2 traps, 10 walls):
+- Experiment 1 (plain random grid -- typical case, 2 treasures, 2 traps, 10 walls):
 
 | Algorithm        | Path cost | Nodes expanded | Runtime (sec) | Traps triggered | Heuristic values computed |
 |------------------|----------:|----------------:|---------------:|-----------------:|---------------------------:|
-| Greedy           |        13 |              14 |       0.000088 |                0 |                         32 |
-| A* (Manhattan)   |        13 |              50 |       0.000186 |                0 |                         61 |
-| A* (Euclidean)   |        13 |              50 |       0.000186 |                0 |                         61 |
+| Greedy           |        18 |              19 |       0.000116 |                0 |                         52 |
+| A* (Manhattan)   |        18 |              36 |       0.000135 |                0 |                         54 |
+| A* (Euclidean)   |        18 |              36 |       0.000132 |                0 |                         54 |
 
 <p>Greedy</p>
 <img src = "/images/a2_experiment_1_greedy.png" alt="">
@@ -296,14 +296,14 @@ algorithm's actual speed.
 
 | Algorithm        | Average Path cost | Average Nodes expanded | Average Runtime (sec) | Traps triggered (total) |
 |------------------|-------------------:|-------------------------:|------------------------:|--------------------------:|
-| Greedy           |               24.3 |                     58.0 |                0.000262 |                          1 |
-| A* (Manhattan)   |               20.3 |                     97.3 |                0.000349 |                          0 |
-| A* (Euclidean)   |               20.3 |                     99.0 |                0.000348 |                          0 |
+| Greedy           |               26.0 |                     59.7 |                0.000259 |                          1 |
+| A* (Manhattan)   |               22.0 |                     92.7 |                0.000435 |                          0 |
+| A* (Euclidean)   |               22.0 |                     94.3 |                0.000459 |                          0 |
 
 ### Discussion of Results
 
-**Efficiency:** Greedy consistently expanded the fewest nodes (58.0 on
-average vs. ~97-99 for A*) and ran fastest, since it never has to maintain or
+**Efficiency:** Greedy consistently expanded the fewest nodes (59.7 on
+average vs. ~93-94 for A*) and ran fastest, since it never has to maintain or
 compare accumulated path costs -- it always trusts the heuristic alone. This
 is the expected trade-off: Greedy is cheaper to run but has no guarantee of
 quality.
@@ -326,12 +326,13 @@ grid (4-directional movement), and both produced the identical optimal path
 cost in every experiment, as expected -- admissible heuristics guarantee
 optimality regardless of which one is used. The difference shows up in the
 heuristic *values* themselves (Euclidean is always <= Manhattan, since
-straight-line distance never exceeds taxicab distance) and in nodes expanded:
-Euclidean's smaller, "flatter" estimates give A* slightly less guidance
-toward the goal, so it expanded marginally more nodes than Manhattan in every
-experiment (e.g. Experiment 1: 50 vs 50, tied; Experiment 3: 226 vs 221) --
-a small but consistent effect of using a looser (less informative) admissible
-heuristic.
+straight-line distance never exceeds taxicab distance) and, in Experiment 3,
+in nodes expanded: Euclidean's smaller, "flatter" estimates give A* slightly
+less guidance toward the goal there, so it expanded a few more nodes than
+Manhattan (226 vs 221). Experiments 1 and 2 tied exactly on nodes expanded
+(36 vs 36, and 21 vs 21) -- the two heuristics only diverge in how much they
+help prune the search when the extra detour around an obstacle is long
+enough for Euclidean's looser estimate to matter.
 
 ## Sample GUI screenshot
 
