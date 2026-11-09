@@ -87,6 +87,15 @@ def count_traps_triggered(grid, path):
 def _start_is_valid(grid, start):
     return is_walkable(grid, start[0], start[1])
 
+def _as_goal_set(goal):
+    """
+    Normalize `goal` to a set of (row, col) positions. Accepts either a
+    single (row, col) tuple or an iterable of them, so a search can stop
+    at ANY one of several treasures instead of only a single pre-chosen one.
+    """
+    if isinstance(goal, tuple) and len(goal) == 2 and isinstance(goal[0], int):
+        return {goal}
+    return set(goal)
 
 # Breadth-First Search (BFS)
 
@@ -101,23 +110,25 @@ def bfs(grid, start, goal):
     nodes_expanded = 0
     path = None
     
+    goals = _as_goal_set(goal)
+
     if _start_is_valid(grid, start):
         frontier = deque([start])
         parent = {start: None} # doubles as the visited set
-        
+
         while frontier:
             current = frontier.popleft()
             nodes_expanded += 1
-            
-            if current == goal:
-                path = reconstruct_path(parent, goal)
+
+            if current in goals:
+                path = reconstruct_path(parent, current)
                 break
-            
+
             for neighbor in get_neighbors(grid, current):
                 if neighbor not in parent:
                     parent[neighbor] = current
                     frontier.append(neighbor)
-                    
+
     return path, nodes_expanded, time.perf_counter() - start_time
 
 
@@ -134,6 +145,8 @@ def bfs_steps(grid, start, goal):
     nodes_expanded = 0
     path = None
 
+    goals = _as_goal_set(goal)
+
     if _start_is_valid(grid, start):
         frontier = deque([start])
         parent = {start: None}
@@ -143,8 +156,8 @@ def bfs_steps(grid, start, goal):
             current = frontier.popleft()
             nodes_expanded += 1
 
-            if current == goal:
-                path = reconstruct_path(parent, goal)
+            if current in goals:
+                path = reconstruct_path(parent, current)
                 elapsed += time.perf_counter() - step_start
                 yield current
                 break
@@ -173,20 +186,22 @@ def dfs(grid, start, goal):
     nodes_expanded = 0
     path = None
     
+    goals = _as_goal_set(goal)
+
     if _start_is_valid(grid, start):
         frontier = [(start, None)] # (node, parent)
         parent = {} # filled in when a node is expanded
-        
+
         while frontier:
             current, came_from = frontier.pop()
             if current in parent:   # already expanded via another route
                 continue
- 
+
             parent[current] = came_from
             nodes_expanded += 1
- 
-            if current == goal:
-                path = reconstruct_path(parent, goal)
+
+            if current in goals:
+                path = reconstruct_path(parent, current)
                 break
  
             # Reversed so the first move in MOVES is explored first.
@@ -203,6 +218,8 @@ def dfs_steps(grid, start, goal):
     nodes_expanded = 0
     path = None
 
+    goals = _as_goal_set(goal)
+
     if _start_is_valid(grid, start):
         frontier = [(start, None)]
         parent = {}
@@ -218,8 +235,8 @@ def dfs_steps(grid, start, goal):
             parent[current] = came_from
             nodes_expanded += 1
 
-            if current == goal:
-                path = reconstruct_path(parent, goal)
+            if current in goals:
+                path = reconstruct_path(parent, current)
                 elapsed += time.perf_counter() - step_start
                 yield current
                 break
@@ -244,6 +261,8 @@ def ucs(grid, start, goal):
     nodes_expanded = 0
     path = None
 
+    goals = _as_goal_set(goal)
+
     if _start_is_valid(grid, start):
         # Priority queue stores (total_cost, position)
         frontier = [(0, start)]
@@ -263,9 +282,9 @@ def ucs(grid, start, goal):
             visited.add(current)
             nodes_expanded += 1
 
-            # Stop once the treasure is found
-            if current == goal:
-                path = reconstruct_path(parent, goal)
+            # Stop once any treasure is found
+            if current in goals:
+                path = reconstruct_path(parent, current)
                 break
 
             # Check all valid neighboring cells
@@ -286,6 +305,8 @@ def ucs_steps(grid, start, goal):
     nodes_expanded = 0
     path = None
 
+    goals = _as_goal_set(goal)
+
     if _start_is_valid(grid, start):
         frontier = [(0, start)]
         costs = {start: 0}
@@ -303,8 +324,8 @@ def ucs_steps(grid, start, goal):
             visited.add(current)
             nodes_expanded += 1
 
-            if current == goal:
-                path = reconstruct_path(parent, goal)
+            if current in goals:
+                path = reconstruct_path(parent, current)
                 elapsed += time.perf_counter() - step_start
                 yield current
                 break
@@ -338,8 +359,10 @@ def greedy_best_first(grid, start, goal, heuristic=manhattan_distance, heuristic
     nodes_expanded = 0
     path = None
 
+    goals = _as_goal_set(goal)
+
     if _start_is_valid(grid, start):
-        start_h = heuristic(start, goal)
+        start_h = min(heuristic(start, g) for g in goals)
         if heuristic_log is not None:
             heuristic_log[start] = start_h
 
@@ -355,14 +378,14 @@ def greedy_best_first(grid, start, goal, heuristic=manhattan_distance, heuristic
             visited.add(current)
             nodes_expanded += 1
 
-            if current == goal:
-                path = reconstruct_path(parent, goal)
+            if current in goals:
+                path = reconstruct_path(parent, current)
                 break
 
             for neighbor in get_neighbors(grid, current):
                 if neighbor not in parent:
                     parent[neighbor] = current
-                    h = heuristic(neighbor, goal)
+                    h = min(heuristic(neighbor, g) for g in goals)
                     if heuristic_log is not None:
                         heuristic_log[neighbor] = h
                     heapq.heappush(frontier, (h, neighbor))
@@ -376,9 +399,11 @@ def greedy_best_first_steps(grid, start, goal, heuristic=manhattan_distance, heu
     nodes_expanded = 0
     path = None
 
+    goals = _as_goal_set(goal)
+
     if _start_is_valid(grid, start):
         step_start = time.perf_counter()
-        start_h = heuristic(start, goal)
+        start_h = min(heuristic(start, g) for g in goals)
         if heuristic_log is not None:
             heuristic_log[start] = start_h
         frontier = [(start_h, start)]
@@ -397,8 +422,8 @@ def greedy_best_first_steps(grid, start, goal, heuristic=manhattan_distance, heu
             visited.add(current)
             nodes_expanded += 1
 
-            if current == goal:
-                path = reconstruct_path(parent, goal)
+            if current in goals:
+                path = reconstruct_path(parent, current)
                 elapsed += time.perf_counter() - step_start
                 yield current
                 break
@@ -406,7 +431,7 @@ def greedy_best_first_steps(grid, start, goal, heuristic=manhattan_distance, heu
             for neighbor in get_neighbors(grid, current):
                 if neighbor not in parent:
                     parent[neighbor] = current
-                    h = heuristic(neighbor, goal)
+                    h = min(heuristic(neighbor, g) for g in goals)
                     if heuristic_log is not None:
                         heuristic_log[neighbor] = h
                     heapq.heappush(frontier, (h, neighbor))
@@ -417,32 +442,48 @@ def greedy_best_first_steps(grid, start, goal, heuristic=manhattan_distance, heu
     return path, nodes_expanded, elapsed
 
 def a_star(grid, start, goal, heuristic=manhattan_distance, heuristic_log=None):
+    """
+    A* search: expands the frontier position with the lowest f(n) = g(n) + h(n),
+    where g(n) is the real cost from start and h(n) is the heuristic estimate
+    to the goal. Finds the lowest-cost path when the heuristic is admissible,
+    while typically expanding far fewer nodes than UCS.
+    """
     start_time = time.perf_counter()
     nodes_expanded = 0
     path = None
 
-    goal_not_found = True
-    start_valid = _start_is_valid(grid, start)
+    goals = _as_goal_set(goal)
 
-    h = heuristic(start, goal)
-    frontier = [(h, 0, start)]
-    costs = {start: 0}
-    parent = {start: None}
-    visited = set()
+    if _start_is_valid(grid, start):
+        h = min(heuristic(start, g) for g in goals)
+        frontier = [(h, 0, start)]
+        costs = {start: 0}
+        parent = {start: None}
+        visited = set()
 
-    f_cost, current_cost, current = heapq.heappop(frontier)
-    if heuristic_log is not None:
-        heuristic_log[start] = h
+        if heuristic_log is not None:
+            heuristic_log[start] = h
 
-    while start_valid and goal_not_found and frontier: # fails right away when start is not valid, else continue finding goal.
-        if current not in visited:
+        while frontier:
+            f_cost, current_cost, current = heapq.heappop(frontier)
+
+            if current in visited:
+                continue
+
+            visited.add(current)
+            nodes_expanded += 1
+
+            if current in goals:
+                path = reconstruct_path(parent, current)
+                break
+
             for neighbor in get_neighbors(grid, current):
                 new_cost = current_cost + move_cost(grid, *neighbor)
                 if neighbor not in costs or new_cost < costs[neighbor]:
                     costs[neighbor] = new_cost
                     parent[neighbor] = current
 
-                    h = heuristic(neighbor, goal)
+                    h = min(heuristic(neighbor, g) for g in goals)
                     f_cost = new_cost + h
 
                     heapq.heappush(frontier, (f_cost, new_cost, neighbor))
@@ -450,28 +491,24 @@ def a_star(grid, start, goal, heuristic=manhattan_distance, heuristic_log=None):
                     if heuristic_log is not None:
                         heuristic_log[neighbor] = h
 
-            visited.add(current)
-            nodes_expanded += 1
-
-        f_cost, current_cost, current = heapq.heappop(frontier)
-
-        if current == goal:
-            path = reconstruct_path(parent, goal)
-            goal_not_found = False
-
-    elapsed = time.perf_counter() - start_time
-
-    return path, nodes_expanded, elapsed
+    return path, nodes_expanded, time.perf_counter() - start_time
 
 def a_star_steps(grid, start, goal, heuristic=manhattan_distance, heuristic_log=None):
-    start_time = time.perf_counter()
+    """
+    Generator version of a_star() for step-by-step GUI animation. Runtime
+    only counts the algorithm's own computation -- not the time spent paused
+    between animation frames while the GUI is waiting to call next() again.
+    """
+    elapsed = 0.0
     nodes_expanded = 0
     path = None
 
+    goals = _as_goal_set(goal)
     goal_not_found = True
     start_valid = _start_is_valid(grid, start)
 
-    h = heuristic(start, goal)
+    step_start = time.perf_counter()
+    h = min(heuristic(start, g) for g in goals)
     frontier = [(h, 0, start)]
     costs = {start: 0}
     parent = {start: None}
@@ -479,13 +516,17 @@ def a_star_steps(grid, start, goal, heuristic=manhattan_distance, heuristic_log=
 
     if heuristic_log is not None:
         heuristic_log[start] = h
+    elapsed += time.perf_counter() - step_start
 
     while start_valid and goal_not_found and frontier:
+        step_start = time.perf_counter()
         f_cost, current_cost, current = heapq.heappop(frontier)
 
         if current not in visited:
+            elapsed += time.perf_counter() - step_start
             # Yield the current position so the GUI can animate it.
             yield current
+            step_start = time.perf_counter()
 
             for neighbor in get_neighbors(grid, current):
                 new_cost = current_cost + move_cost(grid, *neighbor)
@@ -494,7 +535,7 @@ def a_star_steps(grid, start, goal, heuristic=manhattan_distance, heuristic_log=
                     costs[neighbor] = new_cost
                     parent[neighbor] = current
 
-                    h = heuristic(neighbor, goal)
+                    h = min(heuristic(neighbor, g) for g in goals)
                     f_cost = new_cost + h
 
                     heapq.heappush(frontier, (f_cost, new_cost, neighbor))
@@ -505,10 +546,10 @@ def a_star_steps(grid, start, goal, heuristic=manhattan_distance, heuristic_log=
             visited.add(current)
             nodes_expanded += 1
 
-        if current == goal:
-            path = reconstruct_path(parent, goal)
+        if current in goals:
+            path = reconstruct_path(parent, current)
             goal_not_found = False
 
-    elapsed = time.perf_counter() - start_time
+        elapsed += time.perf_counter() - step_start
 
     return path, nodes_expanded, elapsed
