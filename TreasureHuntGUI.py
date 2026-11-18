@@ -3,6 +3,7 @@ from tkinter import messagebox
 from pathlib import Path
 from PIL import Image, ImageTk
 from search import bfs_steps, dfs_steps, ucs_steps, greedy_best_first_steps, a_star_steps, compute_path_cost, count_traps_triggered
+from adversarial import GameState, minimax, alpha_beta, play_game
 from heuristics import manhattan_distance, euclidean_distance
 from TreasureGridModel import MyGridModel, EMPTY, START, STATIC_WALL, TREASURE, TRAP
 
@@ -31,8 +32,11 @@ class TreasureHuntGUI:
         self.start = self.model.start
         self.path = None
         self.visited_cells = []
-        self.animation_delay_ms = 80
+        self.animation_delay_ms = 10
+        self.animation_steps_per_tick = 5
         self._search_generator = None
+        
+        self.game_state = None
 
         image_path = Path(__file__).parent / "images" / "chess_guy.png"
         self.agent_original_image = Image.open(image_path)
@@ -44,18 +48,19 @@ class TreasureHuntGUI:
         # scrollbars) gets whatever space is left over. ---
 
         self.button_frame = tk.Frame(self.root)
-        self.bfs_button = tk.Button(self.button_frame, text="Run BFS", command=lambda: self.run_search(bfs_steps, "BFS"))
-        self.bfs_button.pack(side=tk.LEFT, padx=5)
-        self.dfs_button = tk.Button(self.button_frame, text="Run DFS", command=lambda: self.run_search(dfs_steps, "DFS"))
-        self.dfs_button.pack(side=tk.LEFT, padx=5)
-        self.ucs_button = tk.Button(self.button_frame, text="Run UCS", command=lambda: self.run_search(ucs_steps, "UCS"))
-        self.ucs_button.pack(side=tk.LEFT, padx=5)
-        self.greedy_button = tk.Button(self.button_frame, text="Run Greedy", command=self.run_greedy_search)
-        self.greedy_button.pack(side=tk.LEFT, padx=5)
-        self.astar_manhattan_button = tk.Button(self.button_frame, text="Run A* (Manhattan)", command=lambda: self.run_astar_search(manhattan_distance, "Manhattan"))
-        self.astar_manhattan_button.pack(side=tk.LEFT, padx=5)
-        self.astar_euclidean_button = tk.Button(self.button_frame, text="Run A* (Euclidean)", command=lambda: self.run_astar_search(euclidean_distance, "Euclidean"))
-        self.astar_euclidean_button.pack(side=tk.LEFT, padx=5)
+        
+        self.algorithm_options = [
+            "BFS", "DFS", "UCS", "Greedy",
+            "A* (Manhattan)", "A* (Euclidean)",
+            "Minimax", "Alpha-Beta",
+        ]
+        self.algorithm_var = tk.StringVar(value=self.algorithm_options[0])
+        self.algorithm_menu = tk.OptionMenu(self.button_frame, self.algorithm_var, *self.algorithm_options)
+        self.algorithm_menu.config(width=16)
+        self.algorithm_menu.pack(side=tk.LEFT, padx=5)
+
+        self.run_button = tk.Button(self.button_frame, text="Run", command=self.run_selected_algorithm)
+        self.run_button.pack(side=tk.LEFT, padx=5)
 
         self.regenerate_button = tk.Button(self.root, text="Regenerate Grid", command=self.regenerate_grid)
         self.regenerate_button.pack(side=tk.BOTTOM, pady=(0, 15))
@@ -69,33 +74,38 @@ class TreasureHuntGUI:
         self.stats_label.pack(side=tk.BOTTOM, pady=10)
 
         self.button_frame.pack(side=tk.BOTTOM, pady=10)
+        
+        self.depth_label = tk.Label(self.button_frame, text="Depth:")
+        self.depth_label.pack(side=tk.LEFT, padx=(15, 2))
+
+        self.depth_entry = tk.Entry(self.button_frame, width=4)
+        self.depth_entry.insert(0, "4")
+        self.depth_entry.pack(side=tk.LEFT, padx=2)
+
+        self.minimax_button = tk.Button(
+            self.button_frame, text="Run Minimax",
+            command=lambda: self.run_adversarial(minimax, "Minimax")
+        )
+        self.minimax_button.pack(side=tk.LEFT, padx=5)
+
+        self.alpha_beta_button = tk.Button(
+            self.button_frame, text="Run Alpha-Beta",
+            command=lambda: self.run_adversarial(alpha_beta, "Alpha-Beta")
+        )
+        self.alpha_beta_button.pack(side=tk.LEFT, padx=5)
 
         # --- Grid canvas: packed LAST, so it fills whatever space is left ---
 
         self.grid_frame = tk.Frame(self.root)
-        self.grid_frame.pack(side=tk.TOP, padx=10, pady=10, fill=tk.BOTH, expand=True)
-
-        viewport_width = min(800, self.root.winfo_screenwidth() - 80)
-        viewport_height = min(650, self.root.winfo_screenheight() - 300)
-
-        self.horizontal_scrollbar = tk.Scrollbar(self.grid_frame, orient=tk.HORIZONTAL)
-        self.vertical_scrollbar = tk.Scrollbar(self.grid_frame, orient=tk.VERTICAL)
+        self.grid_frame.pack(side=tk.TOP, padx=10, pady=10)
 
         self.canvas = tk.Canvas(
             self.grid_frame,
-            width=viewport_width,
-            height=viewport_height,
-            bg="white",
-            xscrollcommand=self.horizontal_scrollbar.set,
-            yscrollcommand=self.vertical_scrollbar.set
+            width=self.cell_size * self.model.size,
+            height=self.cell_size * self.model.size,
+            bg="white"
         )
-
-        self.horizontal_scrollbar.config(command=self.canvas.xview)
-        self.vertical_scrollbar.config(command=self.canvas.yview)
-
-        self.horizontal_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
-        self.vertical_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.canvas.pack()
 
         # Safety net: never let the window grow taller than the screen
         self.root.update_idletasks()
@@ -106,20 +116,22 @@ class TreasureHuntGUI:
         self.draw_grid()
 
     def update_cell_size(self):
-        if self.model.size <= 10:
-            self.cell_size = 60
-        elif self.model.size <= 20:
-            self.cell_size = 40
-        elif self.model.size <= 50:
-            self.cell_size = 30
-        else:
-            self.cell_size = 20
+        max_width = min(900, self.root.winfo_screenwidth() - 100)
+        max_height = min(650, self.root.winfo_screenheight() - 300)
+        size = max(1, self.model.size)
+        self.cell_size = max(4, min(max_width // size, max_height // size))
 
         image = self.agent_original_image.resize(
             (self.cell_size, self.cell_size),
             Image.Resampling.LANCZOS
         )
         self.agent_image = ImageTk.PhotoImage(image)
+
+        if hasattr(self, "canvas"):
+            self.canvas.config(
+                width=self.cell_size * self.model.size,
+                height=self.cell_size * self.model.size
+            )
 
     def open_settings_menu(self):
         # If the settings window is already open, just bring it to front
@@ -189,6 +201,10 @@ class TreasureHuntGUI:
         self.start = self.model.start
         self.path = None
         self.visited_cells = []
+        self.start = self.model.start
+        self.path = None
+        self.visited_cells = []
+        self.game_state = None
 
         # Adjust cell size for the newly selected grid
         self.update_cell_size()
@@ -201,9 +217,11 @@ class TreasureHuntGUI:
 
     def regenerate_grid(self):
         self.model.generate_grid()
-        # Clear the previous search path and visited-cell highlights
+        # Clear the previous search path, visited-cell highlights, and any
+        # adversarial game in progress -- agents shouldn't linger on a new grid
         self.path = None
         self.visited_cells = []
+        self.game_state = None
 
         # Reset the statistics display
         self.stats_label.config(
@@ -230,7 +248,8 @@ class TreasureHuntGUI:
                 if cell == STATIC_WALL:
                     color = "gray"
                     symbol = "#"
-                elif cell == TREASURE:
+                elif cell == TREASURE and (self.game_state is None or (row, col) 
+                                           in self.game_state.treasures):
                     color = "lightgreen"
                     symbol = "T"
                 elif cell == TRAP:
@@ -268,19 +287,44 @@ class TreasureHuntGUI:
                         (y1 + y2) / 2,
                         image=self.agent_image
                     )
-
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+                
+                if self.game_state is not None:
+                    if (row, col) == self.game_state.agent_a_pos:
+                        self.canvas.create_oval(x1 + 5, y1 + 5, x2 - 5, y2 - 5, fill="blue")
+                        self.canvas.create_text(
+                            (x1 + x2) / 2, (y1 + y2) / 2, text="A", fill="white",
+                            font=("Arial", max(10, self.cell_size // 2), "bold")
+                        )
+                    if (row, col) == self.game_state.agent_b_pos:
+                        self.canvas.create_oval(x1 + 5, y1 + 5, x2 - 5, y2 - 5, fill="purple")
+                        self.canvas.create_text(
+                            (x1 + x2) / 2, (y1 + y2) / 2, text="B", fill="white",
+                            font=("Arial", max(10, self.cell_size // 2), "bold")
+                        )
 
 
     def _set_controls_state(self, state):
-        self.bfs_button.config(state=state)
-        self.dfs_button.config(state=state)
-        self.ucs_button.config(state=state)
-        self.greedy_button.config(state=state)
-        self.astar_manhattan_button.config(state=state)
-        self.astar_euclidean_button.config(state=state)
+        self.algorithm_menu.config(state=state)
+        self.run_button.config(state=state)
+        self.depth_entry.config(state=state)
         self.regenerate_button.config(state=state)
         self.menu_button.config(state=state)
+
+
+    def run_selected_algorithm(self):
+        choice = self.algorithm_var.get()
+        dispatch = {
+            "BFS": lambda: self.run_search(bfs_steps, "BFS"),
+            "DFS": lambda: self.run_search(dfs_steps, "DFS"),
+            "UCS": lambda: self.run_search(ucs_steps, "UCS"),
+            "Greedy": self.run_greedy_search,
+            "A* (Manhattan)": lambda: self.run_astar_search(manhattan_distance, "Manhattan"),
+            "A* (Euclidean)": lambda: self.run_astar_search(euclidean_distance, "Euclidean"),
+            "Minimax": lambda: self.run_adversarial(minimax, "Minimax"),
+            "Alpha-Beta": lambda: self.run_adversarial(alpha_beta, "Alpha-Beta"),
+        }
+        dispatch[choice]()
+    
 
     def run_search(self, algorithm_steps, algorithm_name):
         goal = self._get_treasure_positions()
@@ -288,6 +332,7 @@ class TreasureHuntGUI:
         # Reset any previous search's visuals
         self.path = None
         self.visited_cells = []
+        self.game_state = None
 
         # Lock out other actions while the animation is running
         self._set_controls_state(tk.DISABLED)
@@ -296,20 +341,26 @@ class TreasureHuntGUI:
         self._search_generator = algorithm_steps(self.model.grid, self.start, goal)
         self._animate_search_step(algorithm_name)
 
-    def _animate_search_step(self, algorithm_name):
-        try:
-            current = next(self._search_generator)
-        except StopIteration as finished:
-            path, nodes_expanded, runtime = finished.value
-            self._finish_search(algorithm_name, path, nodes_expanded, runtime)
-            return
 
-        # Mark this cell as visited, unless it's the start or treasure
-        # (those already have their own fixed appearance)
-        if current != self.start and current not in self._get_treasure_positions():
-            self.visited_cells.append(current)
+    def _animate_search_step(self, algorithm_name):
+        finished_result = None
+
+        for _ in range(self.animation_steps_per_tick):
+            try:
+                current = next(self._search_generator)
+            except StopIteration as finished:
+                finished_result = finished.value
+                break
+
+            if current != self.start and current not in self._get_treasure_positions():
+                self.visited_cells.append(current)
 
         self.draw_grid()
+
+        if finished_result is not None:
+            path, nodes_expanded, runtime = finished_result
+            self._finish_search(algorithm_name, path, nodes_expanded, runtime)
+            return
 
         self.root.after(
             self.animation_delay_ms,
@@ -373,6 +424,7 @@ class TreasureHuntGUI:
 
         self.path = None
         self.visited_cells = []
+        self.game_state = None
         self._heuristic_log = {}
 
         self._set_controls_state(tk.DISABLED)
@@ -386,17 +438,25 @@ class TreasureHuntGUI:
         self._animate_greedy_step()
 
     def _animate_greedy_step(self):
-        try:
-            current = next(self._search_generator)
-        except StopIteration as finished:
-            path, nodes_expanded, runtime = finished.value
+        finished_result = None
+
+        for _ in range(self.animation_steps_per_tick):
+            try:
+                current = next(self._search_generator)
+            except StopIteration as finished:
+                finished_result = finished.value
+                break
+
+            if current != self.start and current not in self._get_treasure_positions():
+                self.visited_cells.append(current)
+
+        self.draw_grid()
+
+        if finished_result is not None:
+            path, nodes_expanded, runtime = finished_result
             self._finish_greedy_search(path, nodes_expanded, runtime)
             return
 
-        if current != self.start and current not in self._get_treasure_positions():
-            self.visited_cells.append(current)
-
-        self.draw_grid()
         self.root.after(self.animation_delay_ms, self._animate_greedy_step)
 
     def _finish_greedy_search(self, path, nodes_expanded, runtime):
@@ -437,6 +497,7 @@ class TreasureHuntGUI:
 
         self.path = None
         self.visited_cells = []
+        self.game_state = None
         self._heuristic_log = {}
         self._astar_heuristic_name = heuristic_name
 
@@ -451,17 +512,25 @@ class TreasureHuntGUI:
         self._animate_astar_step()
 
     def _animate_astar_step(self):
-        try:
-            current = next(self._search_generator)
-        except StopIteration as finished:
-            path, nodes_expanded, runtime = finished.value
+        finished_result = None
+
+        for _ in range(self.animation_steps_per_tick):
+            try:
+                current = next(self._search_generator)
+            except StopIteration as finished:
+                finished_result = finished.value
+                break
+
+            if current != self.start and current not in self._get_treasure_positions():
+                self.visited_cells.append(current)
+
+        self.draw_grid()
+
+        if finished_result is not None:
+            path, nodes_expanded, runtime = finished_result
             self._finish_astar_search(path, nodes_expanded, runtime)
             return
 
-        if current != self.start and current not in self._get_treasure_positions():
-            self.visited_cells.append(current)
-
-        self.draw_grid()
         self.root.after(self.animation_delay_ms, self._animate_astar_step)
 
     def _finish_astar_search(self, path, nodes_expanded, runtime):
@@ -496,9 +565,65 @@ class TreasureHuntGUI:
         )
 
         self._set_controls_state(tk.NORMAL)
+    
+    def run_adversarial(self, algorithm, algorithm_name):
+        try:
+            depth = int(self.depth_entry.get().strip())
+            if depth < 1:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Invalid Depth", "Depth must be a positive integer.")
+            return
 
+        treasures = self._get_treasure_positions()
+        traps = self._get_trap_positions()
+        self.game_state = GameState.new_game(self.model.grid, treasures, traps)
+        self.path = None
+        self.visited_cells = []
 
+        self._set_controls_state(tk.DISABLED)
+        self.stats_label.config(text=f"Running {algorithm_name} (depth {depth})...")
 
+        self._game_history, self._game_summary = play_game(self.game_state, algorithm, depth)
+        self._game_algorithm_name = algorithm_name
+        self._game_depth = depth
+        self._game_step_index = 0
+
+        self.draw_grid()
+        self._animate_game_step()
+
+    def _animate_game_step(self):
+        if self._game_step_index >= len(self._game_history):
+            self._finish_adversarial_game()
+            return
+
+        turn_record = self._game_history[self._game_step_index]
+        self.game_state = turn_record["state"]
+        self._game_step_index += 1
+
+        self.draw_grid()
+        self.root.after(self.animation_delay_ms, self._animate_game_step)
+
+    def _finish_adversarial_game(self):
+        summary = self._game_summary
+        prune_line = (
+            f"Prunes: {summary['prunes']}  Pruning ratio: {summary['pruning_ratio']:.2%}\n"
+            if self._game_algorithm_name == "Alpha-Beta" else ""
+        )
+
+        self.stats_label.config(
+            text=f"{self._game_algorithm_name} (depth {self._game_depth}) finished\n"
+                f"Turns played: {summary['turns']}\n"
+                f"Nodes Expanded: {summary['nodes_expanded']}\n"
+                f"Execution Time: {summary['runtime']:.6f} seconds\n"
+                f"{prune_line}"
+                f"Treasures -- A: {summary['treasures_collected']['A']}  "
+                f"B: {summary['treasures_collected']['B']}\n"
+                f"Outcome (Agent A): {summary['outcome']}"
+        )
+
+        self._set_controls_state(tk.NORMAL)
+        
 if __name__ == "__main__":
     root = tk.Tk()
     app = TreasureHuntGUI(root)
