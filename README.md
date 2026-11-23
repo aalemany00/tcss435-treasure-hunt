@@ -450,6 +450,8 @@ Grid 1 was the one case where the outcome wasn't a clean function of depth: Agen
 
 Alpha-Beta reduced the number of nodes expanded by about 74.3% at depth 6 while producing the same outcome.
 
+<img src = "/images/a3_experiment_1_alpha_beta.png" alt="Grid 1 finished Alpha-Beta game at depth 6">
+
 ### Grid 2
 
 | Algorithm | Depth | Nodes Expanded | Time (s) | Pruning Ratio | Outcome |
@@ -465,6 +467,8 @@ Agent A won on Grid 2 at every depth we tested, though the margin narrowed at de
 
 At depth 6, Alpha-Beta expanded 21,470 nodes compared with Minimax's 76,013, which was about a 71.8% reduction.
 
+<img src = "/images/a3_experiment_2_alpha_beta.png" alt="Grid 2 finished Alpha-Beta game at depth 6">
+
 ### Grid 3
 
 | Algorithm | Depth | Nodes Expanded | Time (s) | Pruning Ratio | Outcome |
@@ -479,6 +483,10 @@ At depth 6, Alpha-Beta expanded 21,470 nodes compared with Minimax's 76,013, whi
 Grid 3 lost at depths 2 and 4 (2–3), then won decisively at depth 6 (4–1), showing that in this case the extra lookahead did pay off.
 
 At depth 6, Alpha-Beta expanded about 86.7% fewer nodes than Minimax and finished in less time.
+
+<img src = "/images/a3_experiment_3_alpha_beta.png" alt="Grid 3 finished Alpha-Beta game at depth 6">
+
+*(Note: the GUI screenshots above place Agent B using the GUI's "farthest free cell from the start" heuristic, rather than the fixed bottom-right corner our headless experiment script uses. The Grid 1 and Grid 2 screenshots happen to match the tables above exactly; Grid 3's screenshot used a slightly different Agent B starting position, so its node/turn counts differ slightly from the table while the overall outcome and pattern are the same.)*
 
 ## Overall Depth Comparison
 
