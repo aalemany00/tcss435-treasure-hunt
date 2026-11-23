@@ -433,52 +433,52 @@ For each grid, we tested depths 2, 4, and 6. We ran both algorithms on the same 
 
 We recorded the nodes expanded, execution time, pruning ratio, turns played, and game outcome.
 
-*(These experiments were re-run after fixing a tie-breaking bug in Minimax and Alpha-Beta that had been causing some games -- especially with the Treasure competition evaluation function -- to loop indefinitely and hit the 200-turn cap instead of finishing normally. The numbers below reflect the corrected code; no game in this round reached the turn limit.)*
+*(These experiments were re-run twice: once after fixing a tie-breaking bug in Minimax and Alpha-Beta that had been causing some games -- especially with the Treasure competition evaluation function -- to loop indefinitely and hit the 200-turn cap instead of finishing normally, and again after adding an opponent-distance term to the Distance-based evaluation function. The numbers below reflect the current code; no game in this round reached the turn limit.)*
 
 ### Grid 1
 
 | Algorithm | Depth | Nodes Expanded | Time (s) | Pruning Ratio | Outcome |
 |---|---:|---:|---:|---:|---|
-| Minimax | 2 | 788 | 0.005301 | N/A | Loss (2–3) |
-| Alpha-Beta | 2 | 657 | 0.004457 | 16.62% | Loss (2–3) |
-| Minimax | 4 | 10,262 | 0.057224 | N/A | Loss (2–3) |
-| Alpha-Beta | 4 | 5,890 | 0.032939 | 18.95% | Loss (2–3) |
-| Minimax | 6 | 135,068 | 0.693837 | N/A | Loss (2–3) |
-| Alpha-Beta | 6 | 53,605 | 0.291821 | 19.28% | Loss (2–3) |
+| Minimax | 2 | 812 | 0.005653 | N/A | Win (3–2) |
+| Alpha-Beta | 2 | 711 | 0.004657 | 12.44% | Win (3–2) |
+| Minimax | 4 | 9,414 | 0.053528 | N/A | Loss (2–3) |
+| Alpha-Beta | 4 | 5,688 | 0.034396 | 16.29% | Loss (2–3) |
+| Minimax | 6 | 107,557 | 0.616062 | N/A | Win (3–2) |
+| Alpha-Beta | 6 | 27,667 | 0.172541 | 28.30% | Win (3–2) |
 
-For our first grid, Agent A lost at every depth, collecting 2 of 5 treasures each time while Agent B collected 3. Increasing the depth did not change the outcome here, but it still caused Minimax to expand a lot more nodes: 135,068 at depth 6 versus 788 at depth 2.
+Grid 1 was the one case where the outcome wasn't a clean function of depth: Agent A won at depth 2, lost at depth 4, then won again at depth 6. This shows that increasing search depth doesn't guarantee steadily improving decisions -- it only guarantees the agent considers more of the game tree, and how that translates into a move still depends on the evaluation function. Node counts still grew sharply with depth, from 812 at depth 2 to 107,557 at depth 6 for Minimax.
 
-Alpha-Beta reduced the number of nodes expanded by about 60.3% at depth 6 while producing the same outcome.
+Alpha-Beta reduced the number of nodes expanded by about 74.3% at depth 6 while producing the same outcome.
 
 ### Grid 2
 
 | Algorithm | Depth | Nodes Expanded | Time (s) | Pruning Ratio | Outcome |
 |---|---:|---:|---:|---:|---|
-| Minimax | 2 | 1,742 | 0.010564 | N/A | Loss (0–4) |
-| Alpha-Beta | 2 | 1,432 | 0.008993 | 17.80% | Loss (0–4) |
-| Minimax | 4 | 13,421 | 0.080157 | N/A | Loss (0–4) |
-| Alpha-Beta | 4 | 6,564 | 0.041927 | 23.12% | Loss (0–4) |
-| Minimax | 6 | 74,757 | 0.435243 | N/A | Win (3–1) |
-| Alpha-Beta | 6 | 15,750 | 0.098935 | 31.43% | Win (3–1) |
+| Minimax | 2 | 995 | 0.005764 | N/A | Win (4–0) |
+| Alpha-Beta | 2 | 819 | 0.005098 | 17.69% | Win (4–0) |
+| Minimax | 4 | 11,629 | 0.067619 | N/A | Win (4–0) |
+| Alpha-Beta | 4 | 5,440 | 0.034306 | 26.37% | Win (4–0) |
+| Minimax | 6 | 76,013 | 0.460837 | N/A | Win (3–1) |
+| Alpha-Beta | 6 | 21,470 | 0.140141 | 26.76% | Win (3–1) |
 
-Grid 2 was interesting because Agent A lost badly at depths 2 and 4 (collecting no treasures at all), but reversed course at depth 6 and won 3–1. The depth-6 game also finished in far fewer turns (35) than the depth-2 game (112), showing the deeper search let Agent A act more decisively instead of wandering.
+Agent A won on Grid 2 at every depth we tested, though the margin narrowed at depth 6 (3–1) compared with a clean sweep at depths 2 and 4 (4–0) -- the deeper search let Agent B collect one treasure instead of none.
 
-At depth 6, Alpha-Beta expanded 15,750 nodes compared with Minimax's 74,757, which was about a 78.9% reduction.
+At depth 6, Alpha-Beta expanded 21,470 nodes compared with Minimax's 76,013, which was about a 71.8% reduction.
 
 ### Grid 3
 
 | Algorithm | Depth | Nodes Expanded | Time (s) | Pruning Ratio | Outcome |
 |---|---:|---:|---:|---:|---|
-| Minimax | 2 | 886 | 0.004933 | N/A | Loss (0–5) |
-| Alpha-Beta | 2 | 678 | 0.003986 | 23.48% | Loss (0–5) |
-| Minimax | 4 | 10,553 | 0.059382 | N/A | Loss (0–5) |
-| Alpha-Beta | 4 | 3,685 | 0.022428 | 31.07% | Loss (0–5) |
-| Minimax | 6 | 103,355 | 0.547436 | N/A | Win (4–1) |
-| Alpha-Beta | 6 | 14,217 | 0.087652 | 34.05% | Win (4–1) |
+| Minimax | 2 | 688 | 0.003764 | N/A | Loss (2–3) |
+| Alpha-Beta | 2 | 486 | 0.003016 | 29.36% | Loss (2–3) |
+| Minimax | 4 | 9,594 | 0.053365 | N/A | Loss (2–3) |
+| Alpha-Beta | 4 | 3,091 | 0.019616 | 35.43% | Loss (2–3) |
+| Minimax | 6 | 101,798 | 0.562868 | N/A | Win (4–1) |
+| Alpha-Beta | 6 | 13,582 | 0.088480 | 34.98% | Win (4–1) |
 
-Grid 3 followed the same pattern as Grid 2: Agent A lost badly at depths 2 and 4 (0–5), then won decisively at depth 6 (4–1).
+Grid 3 lost at depths 2 and 4 (2–3), then won decisively at depth 6 (4–1), showing that in this case the extra lookahead did pay off.
 
-At depth 6, Alpha-Beta expanded about 86.2% fewer nodes than Minimax and finished in less time.
+At depth 6, Alpha-Beta expanded about 86.7% fewer nodes than Minimax and finished in less time.
 
 ## Overall Depth Comparison
 
@@ -486,15 +486,15 @@ Looking at all three grids, Alpha-Beta expanded fewer nodes and ran faster than 
 
 | Grid | Minimax Nodes (Depth 6) | Alpha-Beta Nodes (Depth 6) | Reduction at Depth 6 |
 |---|---:|---:|---:|
-| Grid 1 | 135,068 | 53,605 | 60.3% |
-| Grid 2 | 74,757 | 15,750 | 78.9% |
-| Grid 3 | 103,355 | 14,217 | 86.2% |
+| Grid 1 | 107,557 | 27,667 | 74.3% |
+| Grid 2 | 76,013 | 21,470 | 71.8% |
+| Grid 3 | 101,798 | 13,582 | 86.7% |
 
 Both algorithms had the same final treasure counts and outcomes in every matched test, confirming that Alpha-Beta's pruning never changes the result -- only how much work it takes to get there.
 
-Unlike our earlier results (before the bug fix), deeper search never made the outcome worse in this round: Grid 1 stayed a loss at every depth, but Grids 2 and 3 both turned a loss into a win once depth reached 6. We also noticed that the pruning ratio climbed at higher depths in every grid, which makes sense since a deeper tree gives Alpha-Beta more opportunities to cut off branches early.
+Depth did not uniformly improve the outcome in this round: Grid 1 did best at depths 2 and 6 but dipped at depth 4, Grid 2 won at every depth (though the margin narrowed at depth 6), and Grid 3 needed depth 6 to turn a loss into a win. This shows that a depth-limited evaluation function's own quality matters as much as how deep it searches -- more lookahead only helps once the extra plies actually change which move looks best. We also noticed that the pruning ratio climbed at higher depths in every grid, which makes sense since a deeper tree gives Alpha-Beta more opportunities to cut off branches early.
 
-Overall, Alpha-Beta was more efficient, especially when searching deeper, and deeper search was never actively harmful in this corrected round of testing.
+Overall, Alpha-Beta was consistently more efficient than Minimax, especially when searching deeper, even though deeper search did not always improve Agent A's result.
 
 ## Comparing Evaluation Functions
 
@@ -502,24 +502,24 @@ We also tested Distance-based and Treasure competition using Alpha-Beta at depth
 
 | Grid | Evaluation Function | Nodes Expanded | Time (s) | Turns | Treasures (A–B) | Outcome |
 |---|---|---:|---:|---:|---|---|
-| 1 | Distance-based | 5,890 | 0.032251 | 46 | 2–3 | Loss |
-| 1 | Treasure competition | 5,907 | 0.031830 | 50 | 3–2 | Win |
-| 2 | Distance-based | 6,564 | 0.041829 | 76 | 0–4 | Loss |
-| 2 | Treasure competition | 4,944 | 0.028166 | 59 | 3–1 | Win |
-| 3 | Distance-based | 3,685 | 0.022389 | 60 | 0–5 | Loss |
-| 3 | Treasure competition | 4,539 | 0.025831 | 71 | 2–3 | Loss |
+| 1 | Distance-based | 5,688 | 0.032239 | 46 | 2–3 | Loss |
+| 1 | Treasure competition | 5,907 | 0.031301 | 50 | 3–2 | Win |
+| 2 | Distance-based | 5,440 | 0.034583 | 65 | 4–0 | Win |
+| 2 | Treasure competition | 4,944 | 0.028089 | 59 | 3–1 | Win |
+| 3 | Distance-based | 3,091 | 0.020072 | 38 | 2–3 | Loss |
+| 3 | Treasure competition | 4,539 | 0.025194 | 71 | 2–3 | Loss |
 
-This is a different result than what we found before the bug fix, where the Treasure competition function kept hitting the 200-turn cap and looked much weaker. With that bug fixed, Treasure competition actually won 2 of the 3 grids here, while Distance-based lost all 3 at this specific depth (though Distance-based did go on to win at depth 6, as shown in the depth-comparison tables above).
+With the opponent-distance term added to Distance-based, it won 1 of 3 grids (Grid 2) at depth 4, while Treasure competition won 2 of 3 (Grids 1 and 2); both lost Grid 3. This is closer than our very first (pre-bug-fix) comparison, where Treasure competition looked clearly worse because it kept hitting the 200-turn cap.
 
 Node counts were similar in magnitude for both functions at depth 4, so neither evaluation function was clearly more expensive to run than the other.
 
-Based on this corrected data, we can't say either evaluation function is consistently better -- the outcome depended more on search depth than on which evaluation function was used. We only compared the two functions on three grids, so a larger sample would be needed to draw a firmer conclusion.
+Based on this data, we still can't say either evaluation function is consistently better -- the outcome depended more on search depth and the specific grid layout than on which evaluation function was used. We only compared the two functions on three grids, so a larger sample would be needed to draw a firmer conclusion.
 
 ## What We Learned
 
 The biggest thing we noticed was how much search depth affects performance.
 
-Increasing depth from 2 to 6 made Minimax expand significantly more nodes and increased its runtime. In our corrected results, deeper search never produced a worse outcome: it turned a loss into a win in two of our three grids, and left the third grid's result unchanged.
+Increasing depth from 2 to 6 made Minimax expand significantly more nodes and increased its runtime, but it did not uniformly improve the outcome: Grid 1 actually won at depths 2 and 6 but lost at depth 4, while Grids 2 and 3 either held steady or turned a loss into a win as depth increased. More lookahead only helps when the extra plies actually change which move the evaluation function prefers.
 
 Alpha-Beta helped reduce the amount of searching required. In our experiments, it consistently expanded fewer nodes than Minimax and produced the same final results.
 
@@ -529,9 +529,9 @@ We also learned that the evaluation function matters, and that a bug in either e
 
 For Assignment 3, we added two-player Minimax and Alpha-Beta Pruning to our Treasure Hunt project and tested them at different depths.
 
-Our results showed that Alpha-Beta was more efficient than Minimax, especially at depth 6. It reduced node expansions and execution time while producing the same final outcomes in our tests. Deeper search also never made the outcome worse in our corrected results, and turned a loss into a win in two of our three grids.
+Our results showed that Alpha-Beta was more efficient than Minimax, especially at depth 6. It reduced node expansions and execution time while always producing the same final outcome as Minimax at the same depth. Depth did not uniformly improve Agent A's results, however: Grid 1 did better at depths 2 and 6 than at depth 4, while Grid 3 needed depth 6 to turn a loss into a win.
 
-We also compared two evaluation functions. After fixing a tie-breaking bug that had been causing some games to stall, Treasure competition won 2 of our 3 test grids at depth 4, while Distance-based won 0 of 3 at that depth (Distance-based did go on to win 2 of 3 grids once depth reached 6). Neither function was consistently better across our tests; search depth mattered more than the choice of evaluation function.
+We also compared two evaluation functions, after adding an opponent-distance term to Distance-based so it accounts for treasures, traps, opponent distance, and remaining treasures. At depth 4, Treasure competition won 2 of our 3 test grids and Distance-based won 1 of 3, with both losing the same grid. Neither function was consistently better across our tests; search depth and the specific grid layout mattered more than the choice of evaluation function.
 
 Overall, this assignment helped us understand the tradeoff between searching deeper, choosing an appropriate evaluation function, and keeping the algorithm efficient.
 
