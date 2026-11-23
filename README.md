@@ -3,7 +3,9 @@
 A Python grid-world project in which an agent searches for treasure while
 avoiding traps and static walls. The project is developed in phases: a grid
 GUI and uninformed search (BFS, DFS, UCS) in Assignment 1, followed by
-informed/heuristic search (Greedy Best-First Search and A*) in Assignment 2.
+informed/heuristic search (Greedy Best-First Search and A*) in Assignment 2,
+and two-agent adversarial search (Minimax and Alpha-Beta Pruning) in
+Assignment 3.
 
 ## Team
 
@@ -34,15 +36,20 @@ The main files are:
 
 - `TreasureGridModel.py` — creates and stores the grid and the positions of
   the start, treasures, traps, and walls (supports multiple treasures and
-  multiple traps, and a 20x20 default grid for Assignment 2).
-- `TreasureHuntGUI.py` — displays the grid, provides the algorithm buttons
-  and the Custom Grid Setup menu, and displays search results.
+  multiple traps; defaults to a 15x15 grid with 3-5 treasures and 2-3 traps
+  for Assignment 3, and scales those counts down for smaller legacy grids).
+- `TreasureHuntGUI.py` — displays the grid, provides the algorithm, depth,
+  and evaluation-function dropdowns, the Custom Grid Setup menu, and
+  displays search/game results.
 - `search.py` — contains the BFS, DFS, UCS, Greedy Best-First Search, and A*
   search implementations, plus the movement-cost model (traps are walkable
   but cost more than a normal move).
 - `heuristics.py` — the heuristic functions (Manhattan distance, Euclidean
-  distance) shared by Greedy and A*, and a helper for picking the nearest
-  treasure.
+  distance) shared by Greedy and A*.
+- `adversarial.py` — the two-agent adversarial search used in Assignment 3:
+  `GameState`, Minimax, Alpha-Beta Pruning, both evaluation functions
+  (Distance-based and Treasure competition), and `play_game()`, which runs a
+  full AI-vs-AI game and returns the move history and summary statistics.
 - `images/` — stores image assets and experiment screenshots used by the GUI
   and this README.
 
@@ -63,14 +70,28 @@ If your system uses `python3` instead of `python`, run:
 python3 TreasureHuntGUI.py
 ```
 
-Use **Run BFS**, **Run DFS**, **Run UCS**, **Run Greedy**, **Run A\*
-(Manhattan)**, or **Run A\* (Euclidean)** to execute a search and watch it
-animate step by step. Every search stops at whichever treasure it reaches
-first, since the grid can have more than one. Use **Regenerate Grid** for a
-new random grid, or click the **☰** menu in the top-left corner to open
-**Custom Grid Setup**, which shows the current grid's exact size, start,
-treasure(s), trap(s), and wall coordinates and lets you edit and re-apply
-them to build a specific layout.
+Pick an algorithm from the dropdown -- **BFS**, **DFS**, **UCS**,
+**Greedy**, **A\* (Manhattan)**, **A\* (Euclidean)**, **Minimax**, or
+**Alpha-Beta** -- and click **Run**. Every single-agent search stops at
+whichever treasure it reaches first, since the grid can have more than one,
+and animates step by step.
+
+For **Minimax** or **Alpha-Beta**, also set the **Depth** field (how many
+moves ahead each agent looks; depth 6 is a good default for the full-size
+grid) and pick an **Evaluation** function (**Distance-based** or **Treasure
+competition**) before clicking **Run**. This plays a full AI-vs-AI game:
+Agent A (blue) and Agent B (purple) alternate turns using the selected
+algorithm, and the game animates move by move until every treasure is
+collected or the turn limit is reached. A treasure turns pink where Agent A
+collected it and orange where Agent B did, and the yellow trail shows every
+cell either agent has visited. When the game finishes, the stats panel shows
+turns played, nodes expanded, execution time, Alpha-Beta's pruning ratio
+(if applicable), each agent's treasure count, and the outcome.
+
+Use **Regenerate Grid** for a new random grid, or click the **☰** menu in
+the top-left corner to open **Custom Grid Setup**, which shows the current
+grid's exact size, start, treasure(s), trap(s), and wall coordinates and
+lets you edit and re-apply them to build a specific layout.
 
 ## Implementation and design
 
