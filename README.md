@@ -372,3 +372,192 @@ and reviewed/tested by the team before merging.
 
 ## Sources
 - image used for start position here: [https://pixar.fandom.com/wiki/Geri](https://pixar.fandom.com/wiki/Geri)
+
+
+# Assignment 3 — Adversarial Search
+
+## Overview
+
+For Assignment 3, we added Minimax and Alpha-Beta Pruning to our Treasure Hunt project. Instead of having one agent search for treasure, we now have two agents competing to collect the most treasures.
+
+Agent A tries to maximize its score, while Agent B tries to minimize Agent A's advantage. Both agents take turns moving around the grid.
+
+We also implemented two evaluation functions and tested how different search depths affected the algorithms' performance.
+
+## Grid Setup
+
+We updated the grid to meet the Assignment 3 requirements:
+
+- 15×15 grid
+- 3–5 randomly generated treasures
+- 2–3 traps
+- Static walls
+- Two agents that alternate turns
+
+Both agents can move up, down, left, or right. They cannot move through walls or occupy the same position.
+
+The game ends when all treasures are collected, an agent has no legal move, or the game reaches the 200-turn limit.
+
+
+## Minimax
+
+Minimax is a search algorithm used for games involving two players.
+
+Agent A is the maximizing player, while Agent B is the minimizing player. The algorithm looks ahead at possible moves and evaluates the resulting game states.
+
+Since searching every possible move would take too long, we use depth-limited search. Once the depth limit is reached, the evaluation function estimates how good the current state is.
+
+## Alpha-Beta Pruning
+
+Alpha-Beta works similarly to Minimax, but it skips branches that will not affect the final decision.
+
+It uses two values, alpha and beta, to keep track of the best options found for the maximizing and minimizing players.
+
+We implemented Alpha-Beta to see whether we could reduce the number of nodes expanded without changing the game outcome.
+
+## Evaluation Functions
+
+We used two evaluation functions.
+
+**Distance-based:** This function considers the distance to the nearest treasure, proximity to traps, and the number of treasures each agent has collected. It encourages agents to move toward available treasures while avoiding risky positions.
+
+**Treasure competition:** This function compares how far each agent is from the remaining treasures. It gives Agent A a higher score when it is closer to treasures than Agent B. It also accounts for collected treasures and trap positions.
+
+We compared both functions to see which one helped Agent A perform better.
+
+## Experiments
+
+We tested Minimax and Alpha-Beta on three different 15×15 grids using the Distance-based evaluation function.
+
+For each grid, we tested depths 2, 4, and 6. We ran both algorithms on the same grid before changing configurations so the comparisons would be fair.
+
+We recorded the nodes expanded, execution time, pruning ratio, turns played, and game outcome.
+
+### Grid 1
+
+| Algorithm | Depth | Nodes Expanded | Time (s) | Pruning Ratio | Outcome |
+|---|---:|---:|---:|---:|---|
+| Minimax | 2 | 640 | 0.013644 | N/A | Loss (0–5) |
+| Alpha-Beta | 2 | 561 | 0.009669 | 12.34% | Loss (0–5) |
+| Minimax | 4 | 5,366 | 0.097129 | N/A | Loss (1–4) |
+| Alpha-Beta | 4 | 3,163 | 0.060038 | 19.06% | Loss (1–4) |
+| Minimax | 6 | 37,470 | 0.618981 | N/A | Loss (1–4) |
+| Alpha-Beta | 6 | 12,093 | 0.169812 | 23.02% | Loss (1–4) |
+
+For our first grid, Agent A lost at every depth. At depth 2, it collected no treasures, but at depths 4 and 6, it managed to collect one.
+
+We also noticed that increasing the depth caused Minimax to expand a lot more nodes. At depth 6, Minimax expanded 37,470 nodes compared with Alpha-Beta's 12,093.
+
+Alpha-Beta reduced the number of nodes expanded by about 67.7% at depth 6 while producing the same outcome.
+
+### Grid 2
+
+| Algorithm | Depth | Nodes Expanded | Time (s) | Pruning Ratio | Outcome |
+|---|---:|---:|---:|---:|---|
+| Minimax | 2 | 2,282 | 0.036654 | N/A | Win (3–1) |
+| Alpha-Beta | 2 | 2,001 | 0.035992 | 12.31% | Win (3–1) |
+| Minimax | 4 | 11,543 | 0.190827 | N/A | Loss (2–3) |
+| Alpha-Beta | 4 | 4,647 | 0.083734 | 30.60% | Loss (2–3) |
+| Minimax | 6 | 145,147 | 1.699362 | N/A | Loss (2–3) |
+| Alpha-Beta | 6 | 29,270 | 0.536785 | 31.77% | Loss (2–3) |
+
+Grid 2 was interesting because Agent A actually performed better at depth 2 than at depths 4 and 6.
+
+At depth 2, Agent A won 3–1, although the game reached the 200-turn limit with one treasure remaining. At depths 4 and 6, Agent A lost 2–3.
+
+This showed us that searching deeper doesn't automatically mean the agent will make better decisions.
+
+At depth 6, Alpha-Beta expanded 29,270 nodes compared with Minimax's 145,147, which was about a 79.8% reduction.
+
+### Grid 3
+
+| Algorithm | Depth | Nodes Expanded | Time (s) | Pruning Ratio | Outcome |
+|---|---:|---:|---:|---:|---|
+| Minimax | 2 | 633 | 0.009757 | N/A | Win (4–1) |
+| Alpha-Beta | 2 | 500 | 0.008995 | 21.01% | Win (4–1) |
+| Minimax | 4 | 7,990 | 0.141132 | N/A | Win (4–1) |
+| Alpha-Beta | 4 | 3,466 | 0.073753 | 28.71% | Win (4–1) |
+| Minimax | 6 | 107,482 | 1.726660 | N/A | Win (4–1) |
+| Alpha-Beta | 6 | 23,460 | 0.432589 | 30.58% | Win (4–1) |
+
+On Grid 3, Agent A won every game by collecting four treasures while Agent B collected one.
+
+Even though the outcome stayed the same, the number of nodes increased significantly as we raised the depth.
+
+At depth 6, Alpha-Beta expanded about 78.2% fewer nodes than Minimax and finished in less time.
+
+This was another example of Alpha-Beta being more efficient without changing the outcome.
+
+## Overall Depth Comparison
+
+Looking at all three grids, Alpha-Beta expanded fewer nodes and ran faster than Minimax at every depth we tested.
+
+The difference was especially noticeable at depth 6.
+
+| Grid | Minimax Nodes | Alpha-Beta Nodes | Reduction at Depth 6 |
+|---|---:|---:|---:|
+| Grid 1 | 37,470 | 12,093 | 67.7% |
+| Grid 2 | 145,147 | 29,270 | 79.8% |
+| Grid 3 | 107,482 | 23,460 | 78.2% |
+
+Both algorithms had the same final treasure counts and outcomes in every matched test.
+
+We also noticed that the pruning ratios increased at higher depths. The GUI's pruning ratio is based on skipped branches, so it is different from the percentage reduction in nodes expanded compared with Minimax.
+
+Overall, Alpha-Beta was more efficient, especially when searching deeper.
+
+## Comparing Evaluation Functions
+
+We also tested Distance-based and Treasure competition using Alpha-Beta at depth 4.
+
+We ran both functions on three matching grid configurations and compared their results.
+
+| Grid | Evaluation Function | Nodes Expanded | Time (s) | Turns | Treasures (A–B) | Outcome |
+|---|---|---:|---:|---:|---|---|
+| 3 | Distance-based | 3,466 | 0.067285 | 37 | 4–1 | Win |
+| 3 | Treasure competition | 22,597 | 0.255264 | 200 | 3–1 | Win |
+| 4 | Distance-based | 3,088 | 0.053778 | 34 | 2–2 | Draw |
+| 4 | Treasure competition | 18,653 | 0.257962 | 200 | 1–2 | Loss |
+| 5 | Distance-based | 2,062 | 0.036409 | 27 | 3–2 | Win |
+| 5 | Treasure competition | 2,252 | 0.033071 | 27 | 3–2 | Win |
+
+From these tests, Distance-based seemed to work better overall.
+
+On Grid 3, Distance-based helped Agent A collect four treasures, compared with three using Treasure competition. The Treasure competition run also reached the 200-turn limit.
+
+On Grid 4, Distance-based resulted in a draw, while Treasure competition resulted in a loss.
+
+On Grid 5, both functions produced the same outcome, with Agent A winning 3–2.
+
+Distance-based also expanded fewer nodes in all three comparisons.
+
+Based on our results, Distance-based was more consistent. However, we only compared the evaluation functions on three grids, so we can't say it would always perform better.
+
+## What We Learned
+
+The biggest thing we noticed was how much search depth affects performance.
+
+Increasing depth from 2 to 6 made Minimax expand significantly more nodes and increased its runtime. Although deeper search gave the algorithm more information about future moves, it didn't always improve the outcome.
+
+Alpha-Beta helped reduce the amount of searching required. In our experiments, it consistently expanded fewer nodes than Minimax and produced the same final results.
+
+We also learned that the evaluation function matters. The two functions sometimes made different decisions even when using the same algorithm and search depth.
+
+## Conclusion
+
+For Assignment 3, we added two-player Minimax and Alpha-Beta Pruning to our Treasure Hunt project and tested them at different depths.
+
+Our results showed that Alpha-Beta was more efficient than Minimax, especially at depth 6. It reduced node expansions and execution time while producing the same final outcomes in our tests.
+
+We also compared two evaluation functions. Distance-based performed better on two of the three grids and tied on the third.
+
+Overall, this assignment helped us understand the tradeoff between searching deeper, choosing an appropriate evaluation function, and keeping the algorithm efficient.
+
+## Generative AI Statement — Assignment 3
+
+We used ChatGPT to help organize our experimental results, calculate performance differences, and revise the README explanations. The actual experiment results came from running our program and recording the displayed metrics.
+
+
+
+
+
