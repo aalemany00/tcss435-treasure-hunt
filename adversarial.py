@@ -81,10 +81,12 @@ def manhattan(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
-def evaluate_distance(state):
-    """Baseline heuristic: nearest-treasure distance and trap proximity.
+OPPONENT_DISTANCE_WEIGHT = 0.3
 
-    The score is always from Agent A's perspective: positive favors A.
+def evaluate_distance(state):
+    """Baseline heuristic: nearest-treasure distance, trap proximity,
+    collected-treasure bonus, and opponent distance -- from Agent A's
+    perspective: positive favors A.
     """
     score = TREASURE_BONUS * (state.a_collected - state.b_collected)
     if not state.treasures:
@@ -110,7 +112,14 @@ def evaluate_distance(state):
                 trap_score = -0.5 / nearest_trap
         return -nearest_distance + trap_score
 
-    return score + positional_score(state.agent_a_pos) - positional_score(state.agent_b_pos)
+    # Being closer to the opponent is a slight advantage: it lets an agent
+    # contest a treasure the opponent is also heading for, since legal_moves
+    # already forbids stepping onto the opponent's own cell.
+    opponent_distance = manhattan(state.agent_a_pos, state.agent_b_pos)
+    opponent_term = -OPPONENT_DISTANCE_WEIGHT * opponent_distance
+
+    return (score + positional_score(state.agent_a_pos) - positional_score(state.agent_b_pos)
+            + opponent_term)
 
 
 def evaluate_competition(state):
