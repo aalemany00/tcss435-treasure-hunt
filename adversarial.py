@@ -10,6 +10,7 @@ from __future__ import annotations
 import time
 from functools import lru_cache
 from TreasureGridModel import STATIC_WALL
+from search import bfs
 
 # Four cardinal moves. We deliberately omit the 'stay' action: it creates
 # redundant branches and can encourage agents to waste turns. A player with no
@@ -113,20 +114,20 @@ def evaluate_distance(state):
 
 
 def evaluate_competition(state):
-    """Alternative heuristic: score each treasure by the agents' relative distance.
-
-    A treasure favors A when A is closer, favors B when B is closer, and is
-    neutral when both agents are equally far away. Collected treasure and trap
-    terms are handled as in the baseline heuristic.
+    """Alternative heuristic: reward being closer than the opponent to the
+    single nearest remaining treasure, rather than summing over every
+    treasure at once (summing creates cancelling, nearly-flat scores when
+    treasures favor different agents, which stalls the search at any depth).
     """
     score = TREASURE_BONUS * (state.a_collected - state.b_collected)
 
-    for treasure in state.treasures:
-        distance_a = manhattan(state.agent_a_pos, treasure)
-        distance_b = manhattan(state.agent_b_pos, treasure)
-        score += distance_b - distance_a
+    if state.treasures:
+        nearest_to_a = min(state.treasures, key=lambda t: manhattan(state.agent_a_pos, t))
+        nearest_to_b = min(state.treasures, key=lambda t: manhattan(state.agent_b_pos, t))
+        score += manhattan(state.agent_b_pos, nearest_to_a) - manhattan(state.agent_a_pos, nearest_to_a)
+        score += manhattan(state.agent_b_pos, nearest_to_b) - manhattan(state.agent_a_pos, nearest_to_b)
+        score /= 2
 
-    # Keep a small safety term so standing directly on a trap is discouraged.
     if state.agent_a_pos in state.traps:
         score -= TRAP_PENALTY
     if state.agent_b_pos in state.traps:
@@ -160,13 +161,20 @@ def minimax(state, depth, evaluation_function=evaluate_distance):
         moves = s.legal_moves()
         if not moves: return evaluation_function(s), None
         maximizing = s.turn == "A"
-        best_score = float("-inf") if maximizing else float("inf")
+        best_score = None
+        best_key = None
         best_move = None
         for move in moves:
-            score, _ = recurse(s.apply_move(move), d-1)
-            if (maximizing and score > best_score) or (not maximizing and score < best_score):
-                best_score, best_move = score, move
+            child = s.apply_move(move)
+            score, _ = recurse(child, d-1)
+            # Tie-break on 1-ply (immediate) eval so ties between "collect now"
+            # and "collect later" don't let the agents orbit forever.
+            immediate = evaluation_function(child)
+            tie_key = (score, immediate) if maximizing else (-score, -immediate)
+            if best_key is None or tie_key > best_key:
+                best_key, best_score, best_move = tie_key, score, move
         return best_score, best_move
+
     score, move = recurse(state, max(0, int(depth)))
     return score, move, nodes, time.perf_counter()-started
 
@@ -186,12 +194,16 @@ def alpha_beta(state, depth, evaluation_function=evaluate_distance):
         moves = s.legal_moves()
         if not moves: return evaluation_function(s), None
         maximizing = s.turn == "A"
-        best = float("-inf") if maximizing else float("inf")
+        best = None
+        best_key = None
         best_move = None
         for index, move in enumerate(moves):
-            score, _ = recurse(s.apply_move(move), d-1, alpha, beta)
-            if (maximizing and score > best) or (not maximizing and score < best):
-                best, best_move = score, move
+            child = s.apply_move(move)
+            score, _ = recurse(child, d-1, alpha, beta)
+            immediate = evaluation_function(child)
+            tie_key = (score, immediate) if maximizing else (-score, -immediate)
+            if best_key is None or tie_key > best_key:
+                best_key, best, best_move = tie_key, score, move
             if maximizing: alpha = max(alpha, best)
             else: beta = min(beta, best)
             if beta <= alpha:
@@ -200,22 +212,50 @@ def alpha_beta(state, depth, evaluation_function=evaluate_distance):
                 prunes += len(moves) - index - 1
                 break
         return best, best_move
+
     score, move = recurse(state, max(0, int(depth)), float("-inf"), float("inf"))
     return score, move, nodes, time.perf_counter()-started, prunes
 
+def _legal_progress_move(state):
+    """Wall-aware fallback move toward the nearest remaining treasure. Used
+    only to break a repeated-position deadlock in play_game() -- see there.
+    """
+    if not state.treasures:
+        return None
+    pos = state.agent_a_pos if state.turn == "A" else state.agent_b_pos
+    path, _, _ = bfs(state.grid, pos, list(state.treasures))
+    if not path or len(path) < 2:
+        return None
+    next_step = path[1]
+    return next_step if next_step in state.legal_moves() else None
 
 def play_game(state, algorithm, depth, max_turns=200, evaluation_function=evaluate_distance):
     """Run an AI-vs-AI game and return chronological move records + metrics."""
     history = []; nodes_total = 0; prunes_total = 0; runtime_total = 0.0
     collected = {"A": 0, "B": 0}; turns = 0
+    seen_states = {}
     while not state.is_terminal() and turns < max_turns:
         mover = state.turn
+        state_key = (state.agent_a_pos, state.agent_b_pos, state.treasures, state.turn)
+        seen_states[state_key] = seen_states.get(state_key, 0) + 1
+
         result = algorithm(state, depth, evaluation_function)
         if algorithm is alpha_beta:
             score, move, nodes, runtime, prunes = result; prunes_total += prunes
         else:
             score, move, nodes, runtime = result; prunes = 0
         nodes_total += nodes; runtime_total += runtime
+
+        # Depth-limited search has no notion of "we've been here before": a
+        # genuine strategic standoff can repeat the same position forever.
+        # If that happens, break the deadlock with a real (wall-aware)
+        # shortest-path step toward the nearest remaining treasure instead
+        # of letting the search repeat its own prior decision.
+        if seen_states[state_key] >= 4:
+            progress_move = _legal_progress_move(state)
+            if progress_move is not None:
+                move = progress_move
+
         if move is None: break
         if move in state.treasures: collected[mover] += 1
         state = state.apply_move(move)
